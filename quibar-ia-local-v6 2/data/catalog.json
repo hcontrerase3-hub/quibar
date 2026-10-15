@@ -1,0 +1,154 @@
+[
+  {
+    "id": "rio-claro",
+    "name": "Refugio Río Claro",
+    "category": "Alojamiento",
+    "commune": "Quilaco",
+    "area": "Sector rural de Quilaco",
+    "summary": "Cabañas para una escapada tranquila entre naturaleza y descanso.",
+    "description": "Un espacio de ejemplo para mostrar cómo se presentaría una estadía en el territorio. La ficha reúne servicios, sector y horarios de atención en un solo lugar.",
+    "offerings": [
+      "Cabañas equipadas",
+      "Estacionamiento",
+      "Estadías familiares"
+    ],
+    "hours": "Consultas: lunes a domingo, 09:00–20:00",
+    "keywords": "cabaña cabañas dormir hospedaje familia escapada descansar naturaleza",
+    "visual": "stay",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "fogones",
+    "name": "Fogones del Valle",
+    "category": "Gastronomía",
+    "commune": "Santa Bárbara",
+    "area": "Zona urbana de Santa Bárbara",
+    "summary": "Cocina casera y sabores locales para compartir en familia.",
+    "description": "Restaurante ficticio que representa la oferta gastronómica local. Sus platos y horarios son ilustrativos para probar la búsqueda y las recomendaciones.",
+    "offerings": [
+      "Almuerzos",
+      "Menú casero",
+      "Opciones para grupos"
+    ],
+    "hours": "Martes a domingo, 12:00–18:00",
+    "keywords": "comer almuerzo comida restaurante cocina casera familia plato",
+    "visual": "food",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "manos-del-biobio",
+    "name": "Manos del Biobío",
+    "category": "Artesanía",
+    "commune": "Quilaco",
+    "area": "Centro de Quilaco",
+    "summary": "Piezas hechas a mano para llevar un recuerdo del territorio.",
+    "description": "Vitrina de demostración para un emprendimiento artesanal. En una versión real, cada producto y dato de contacto requeriría validación de la PYME.",
+    "offerings": [
+      "Textiles",
+      "Objetos decorativos",
+      "Regalos"
+    ],
+    "hours": "Lunes a sábado, 10:00–18:00",
+    "keywords": "artesanía artesano regalo souvenir recuerdo tejido textil comprar",
+    "visual": "craft",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "senderos",
+    "name": "Senderos del Alto",
+    "category": "Turismo",
+    "commune": "Santa Bárbara",
+    "area": "Sector rural de Santa Bárbara",
+    "summary": "Paseos guiados para conocer paisajes y caminos de la zona.",
+    "description": "Ejemplo de prestador turístico para demostrar el descubrimiento por intereses. Las actividades descritas son ficticias y no representan reservas disponibles.",
+    "offerings": [
+      "Caminatas guiadas",
+      "Salidas de medio día",
+      "Grupos pequeños"
+    ],
+    "hours": "Salidas con coordinación previa",
+    "keywords": "paseo senderismo caminata trekking guía excursion aire libre aventura naturaleza",
+    "visual": "outdoors",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "grano-nativo",
+    "name": "Grano Nativo",
+    "category": "Gastronomía",
+    "commune": "Quilaco",
+    "area": "Centro de Quilaco",
+    "summary": "Café, repostería y una pausa amable durante el recorrido.",
+    "description": "Cafetería ficticia incluida para ilustrar cómo Quibar puede encontrar alternativas para una pausa, incluso cuando el usuario escribe con sus propias palabras.",
+    "offerings": [
+      "Café",
+      "Repostería",
+      "Para llevar"
+    ],
+    "hours": "Lunes a sábado, 08:30–19:00",
+    "keywords": "café cafe cafetería desayuno té pastel dulce torta once comer",
+    "visual": "coffee",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "mercadito",
+    "name": "Mercadito del Puente",
+    "category": "Comercio",
+    "commune": "Santa Bárbara",
+    "area": "Centro de Santa Bárbara",
+    "summary": "Productos cotidianos y especialidades para llevar de camino.",
+    "description": "Comercio de paso de ejemplo, pensado para mostrar información breve y útil a residentes y visitantes.",
+    "offerings": [
+      "Abarrotes",
+      "Productos de temporada",
+      "Compras rápidas"
+    ],
+    "hours": "Lunes a sábado, 09:00–20:00",
+    "keywords": "tienda almacén comprar compras abarrotes productos mercado",
+    "visual": "shop",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "bosque-sereno",
+    "name": "Camping Bosque Sereno",
+    "category": "Alojamiento",
+    "commune": "Santa Bárbara",
+    "area": "Sector rural de Santa Bárbara",
+    "summary": "Una alternativa de camping para disfrutar al aire libre.",
+    "description": "Ficha ficticia de alojamiento al aire libre. Presenta el tipo de servicios que podría ofrecer una PYME una vez incorporada y aprobada en el catálogo.",
+    "offerings": [
+      "Sitios de camping",
+      "Servicios básicos",
+      "Espacio familiar"
+    ],
+    "hours": "Consultas: lunes a domingo, 09:00–19:00",
+    "keywords": "camping acampar carpa dormir alojamiento naturaleza aire libre familia",
+    "visual": "camp",
+    "status": "Aprobado",
+    "demo": true
+  },
+  {
+    "id": "hebras",
+    "name": "Hebras de la Cordillera",
+    "category": "Artesanía",
+    "commune": "Santa Bárbara",
+    "area": "Zona urbana de Santa Bárbara",
+    "summary": "Tejidos y accesorios inspirados en los colores del territorio.",
+    "description": "Emprendimiento artesanal de demostración. La información sirve para recorrer las fichas y probar filtros, sin asociarse a un negocio real.",
+    "offerings": [
+      "Tejidos",
+      "Accesorios",
+      "Regalos artesanales"
+    ],
+    "hours": "Martes a sábado, 11:00–18:00",
+    "keywords": "tejido artesanía regalo lana accesorios comprar souvenir",
+    "visual": "textile",
+    "status": "Aprobado",
+    "demo": true
+  }
+]
