@@ -6,7 +6,7 @@ Prototipo académico interactivo para descubrir PYMEs de Quilaco y Santa Bárbar
 
 1. Instala [Node.js](https://nodejs.org/) 22.13 o posterior y [Python](https://www.python.org/downloads/) 3.10 o posterior si todavía no los tienes.
 2. Instala la aplicación [Ollama para macOS](https://ollama.com/download/mac), ábrela y acepta instalar su comando de Terminal. Requiere macOS 14 o posterior.
-3. Descarga el modelo local indicado en el informe (aproximadamente 9,3 GB; es una descarga única):
+3. Copia `.env.example` como `.env` y ajusta ahí los puertos, la URL de Ollama y el modelo si es necesario. El modelo indicado en el informe está configurado en `QUIBAR_MODEL` (aproximadamente 9,3 GB; es una descarga única):
 
    ```bash
    ollama pull qwen3:14b-q4_K_M
@@ -23,7 +23,7 @@ Prototipo académico interactivo para descubrir PYMEs de Quilaco y Santa Bárbar
 
 El iniciador instala las dependencias de Node y Python la primera vez, prepara la página, **carga el modelo local antes de abrir el tótem**, inicia FastAPI y abre `http://localhost:3000/` en modo tótem si Chrome está instalado. La carga inicial puede tardar; la Terminal muestra si la IA quedó lista o por qué Ollama no pudo cargarla. Mantén la ventana de Terminal abierta. `Ctrl+C` detiene los servidores. Si Ollama no está listo, el catálogo y las respuestas básicas siguen funcionando.
 
-Si macOS bloquea el doble clic sobre el archivo `.command`, ejecuta los comandos anteriores desde Terminal. Si el modelo de 14B no cabe cómodamente en el Mac, puedes instalar `ollama pull qwen3:4b` y ejecutar `QUIBAR_MODEL=qwen3:4b ./iniciar-quibar.command` como variante de demostración; el modelo previsto en el informe sigue siendo el de 14B.
+Si macOS bloquea el doble clic sobre el archivo `.command`, ejecuta los comandos anteriores desde Terminal. Si el modelo de 14B no cabe cómodamente en el Mac, instala `ollama pull qwen3:4b` y cambia `QUIBAR_MODEL` a `qwen3:4b` en `.env` como variante de demostración.
 
 ## Iniciar manualmente
 
@@ -33,7 +33,8 @@ Desde la carpeta del proyecto, con Ollama abierto y el modelo descargado, usa do
 python3 -m venv .venv
 .venv/bin/python -m pip install -r backend/requirements.txt
 .venv/bin/python -m backend.preload
-.venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000
+set -a; . ./.env; set +a
+.venv/bin/python -m uvicorn backend.app:app --host "$QUIBAR_API_HOST" --port "$QUIBAR_API_PORT"
 ```
 
 En la segunda ventana:
@@ -41,7 +42,8 @@ En la segunda ventana:
 ```bash
 npm ci
 npm run build
-npm run start
+set -a; . ./.env; set +a
+./node_modules/.bin/next start --hostname "$QUIBAR_WEB_HOST" -p "$QUIBAR_WEB_PORT"
 ```
 
 Abre `http://localhost:3000/`. La página, la API, Ollama y SQLite están configurados para el mismo computador. La aplicación no requiere claves ni proveedores de IA en la nube; la descarga inicial de Ollama, el modelo y las dependencias sí requiere conexión a Internet.
@@ -61,8 +63,8 @@ La base SQLite se crea en `backend/quibar.sqlite3`; para restablecer los ocho ej
 
 ```bash
 .venv/bin/python -m unittest backend.test_quibar -v
-curl -s http://127.0.0.1:8000/api/quibar/health
-curl -s -X POST http://127.0.0.1:8000/api/quibar/chat \
+curl -s "http://127.0.0.1:${QUIBAR_API_PORT:-8000}/api/quibar/health"
+curl -s -X POST "http://127.0.0.1:${QUIBAR_API_PORT:-8000}/api/quibar/chat" \
   -H 'Content-Type: application/json' \
   -d '{"query":"Un café en Quilaco"}'
 ```

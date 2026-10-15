@@ -8,14 +8,17 @@ import time
 from typing import Literal
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
 from .db import approved, initialize
 from .rag import compose, intent_of, normalize, retrieve
 
+load_dotenv()
+
 MODEL = os.environ.get("QUIBAR_MODEL", "qwen3:14b-q4_K_M")
-OLLAMA_URL = "http://127.0.0.1:11434"
+OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 MODEL_TIMEOUT = float(os.environ.get("QUIBAR_MODEL_TIMEOUT", "110"))
 
 app = FastAPI(title="Quíbar, API local", docs_url=None, redoc_url=None)
