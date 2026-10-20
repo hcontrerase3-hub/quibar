@@ -1,0 +1,68 @@
+x-app: &app
+  image: ${QUIBAR_IMAGE:-quibar-app:local}
+  environment: &environment
+    QUIBAR_DB_PATH: /state/quibar.sqlite3
+    QUIBAR_MEDIA_DIR: /state/media
+    QUIBAR_TILES_PATH: /state/map.mbtiles
+    QUIBAR_DIST_DIR: /app/dist
+    OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+    QUIBAR_MODEL: ${QUIBAR_MODEL:-qwen3:14b-q4_K_M}
+    QUIBAR_MODEL_TIMEOUT: ${QUIBAR_MODEL_TIMEOUT:-6}
+    QUIBAR_MODEL_KEEP_ALIVE: '-1'
+    QUIBAR_ADMIN_NETWORKS: 127.0.0.1/32
+  volumes:
+    - state:/state
+    - socket:/run/quibar
+  init: true
+  security_opt: [no-new-privileges:true]
+
+services:
+  app:
+    <<: *app
+    build: .
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, -m, backend.container_ops, health]
+      interval: 5s
+      timeout: 4s
+      retries: 20
+      start_period: 15s
+  nginx:
+    image: nginx:1.28-alpine
+    ports: ['127.0.0.1:${QUIBAR_PORT:-8000}:8080']
+    volumes:
+      - ./ops/docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - socket:/run/quibar:ro
+    restart: unless-stopped
+    depends_on:
+      app: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/api/quibar/health']
+      interval: 5s
+      timeout: 4s
+      retries: 12
+  maintenance:
+    <<: *app
+    command: [python, -m, backend.container_ops, maintenance]
+    restart: unless-stopped
+    depends_on:
+      app: {condition: service_healthy}
+  ollama:
+    image: ollama/ollama:0.18.0
+    profiles: [ollama]
+    volumes: [models:/root/.ollama]
+    restart: unless-stopped
+  model-init:
+    <<: *app
+    profiles: [model]
+    command: [python, -m, backend.container_ops, model]
+    volumes: []
+    restart: 'no'
+  tools:
+    <<: *app
+    profiles: [tools]
+    command: [python, -m, backend.cli, --help]
+volumes:
+  state:
+  socket:
+  models:

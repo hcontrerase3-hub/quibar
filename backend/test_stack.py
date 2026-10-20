@@ -23,6 +23,7 @@ class StackAcceptance(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.env = patch.dict(os.environ, {"QUIBAR_DB_PATH": f"{self.tmp.name}/db.sqlite3",
+                                          "QUIBAR_ADMIN_NETWORKS": "127.0.0.0/8,::1/128,100.64.0.0/10",
                                           "QUIBAR_MEDIA_DIR": f"{self.tmp.name}/media",
                                           "QUIBAR_TILES_PATH": f"{self.tmp.name}/map.mbtiles"})
         self.env.start()

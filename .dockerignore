@@ -1,0 +1,12 @@
+.git
+.env*
+.venv
+node_modules
+dist
+.next
+**/__pycache__
+**/*.sqlite3*
+**/*.mbtiles
+backend/media
+backups
+.quibar*
