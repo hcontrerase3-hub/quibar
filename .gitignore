@@ -3,3 +3,4 @@
 !.env.example
 .venv
 node_modules/
+backend/__pycache__/
