@@ -1,6 +1,13 @@
 .env
 .env.*
 !.env.example
-.venv
+.venv/
 node_modules/
-backend/__pycache__/
+__pycache__/
+*.py[cod]
+*.sqlite3*
+*.mbtiles
+backend/media/
+dist/
+.next/
+*.tsbuildinfo

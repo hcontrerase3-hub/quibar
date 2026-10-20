@@ -170,3 +170,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     result = [Match(**{key: row[key] for key in ("id", "name", "category", "commune")}) for row in selected]
     return ChatResponse(reply=reply, matches=result,
                         mode=mode, elapsed_ms=int((time.monotonic() - start) * 1000))
+
+# The SPA fallback must be registered after all API routes.
+from .web import router as web_router
+app.include_router(web_router)
