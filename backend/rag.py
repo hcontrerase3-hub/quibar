@@ -81,10 +81,10 @@ def intent_of(query: str) -> str:
 
 def compose(rows: list[dict], intent: str, *, unknown: bool = False) -> str:
     if unknown or not rows:
-        return "No cuento con ese registro en el catálogo de ejemplo aprobado. Puedes probar otra búsqueda o explorar las fichas disponibles."
+        return "No cuento con ese registro en el catálogo aprobado. Puedes probar otra búsqueda o explorar las fichas disponibles."
     if len(rows) == 1:
         row = rows[0]
-        prefix = f"En este catálogo de ejemplo, {row['name']}"
+        prefix = f"En este catálogo de ejemplo, {row['name']}" if row["demo"] else row["name"]
         if intent == "hours":
             return f"{prefix} indica este horario: {row['hours']}. Abre la ficha para revisar el dato completo."
         if intent == "location":
@@ -93,4 +93,5 @@ def compose(rows: list[dict], intent: str, *, unknown: bool = False) -> str:
             return f"{prefix} ofrece: {', '.join(row['offerings'])}."
         return f"{prefix} aparece en {row['commune']}: {row['summary']}"
     names = ", ".join(r["name"] for r in rows)
-    return f"Encontré estas opciones aprobadas en el catálogo de ejemplo: {names}. Toca una ficha para ver sus datos."
+    label = "catálogo de ejemplo" if any(r["demo"] for r in rows) else "catálogo"
+    return f"Encontré estas opciones aprobadas en el {label}: {names}. Toca una ficha para ver sus datos."

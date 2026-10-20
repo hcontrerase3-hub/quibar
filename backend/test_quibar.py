@@ -1,5 +1,6 @@
 """Pruebas de aceptación del catálogo, el diálogo y el límite de confianza."""
 
+from contextlib import closing
 import os
 import json
 import sqlite3
@@ -18,6 +19,9 @@ from backend.rag import retrieve
 
 class QuibarAcceptance(unittest.TestCase):
     def setUp(self):
+        self.model_patches = [patch("backend.app.MODEL", "qwen3:14b-q4_K_M"), patch("backend.preload.MODEL", "qwen3:14b-q4_K_M")]
+        for item in self.model_patches:
+            item.start()
         self.directory = tempfile.TemporaryDirectory()
         self.db_var = patch.dict(os.environ, {"QUIBAR_DB_PATH": f"{self.directory.name}/test.sqlite3"})
         self.db_var.start()
@@ -28,6 +32,8 @@ class QuibarAcceptance(unittest.TestCase):
         self.client.close()
         self.db_var.stop()
         self.directory.cleanup()
+        for item in self.model_patches:
+            item.stop()
 
     def ask(self, query, **extra):
         response = self.client.post("/api/quibar/chat", json={"query": query, **extra})
@@ -136,8 +142,8 @@ class QuibarAcceptance(unittest.TestCase):
         self.assertNotIn("Grano Nativo", greeting["reply"])
 
     def test_unapproved_never_appears_or_becomes_context(self):
-        with sqlite3.connect(os.environ["QUIBAR_DB_PATH"]) as conn:
-            conn.execute("UPDATE businesses SET status = 'Suspendido' WHERE id = 'grano-nativo'")
+        with closing(sqlite3.connect(os.environ["QUIBAR_DB_PATH"])) as conn, conn:
+            conn.execute("UPDATE comercio SET estado_moderacion = 'Suspendido' WHERE public_id = 'grano-nativo'")
         self.assertNotIn("grano-nativo", {r["id"] for r in self.client.get("/api/quibar/catalog").json()})
         self.assertEqual(retrieve("¿Conoces Grano Nativo?", approved()), [])
         result = self.ask("¿Y su horario?", context_ids=["grano-nativo"])

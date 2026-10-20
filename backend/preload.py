@@ -27,7 +27,7 @@ def main() -> int:
             print(f"Falta el modelo local. Instálalo con: ollama pull {MODEL}", flush=True)
             return 1
 
-        print(f"Cargando {MODEL} en este Mac; la primera vez puede tardar…", flush=True)
+        print(f"Cargando {MODEL} en este equipo; la primera vez puede tardar…", flush=True)
         try:
             response = client.post(f"{OLLAMA_URL}/api/generate",
                                    json={"model": MODEL, "stream": False, "keep_alive": "30m"},
