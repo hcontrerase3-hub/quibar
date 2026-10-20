@@ -1,0 +1,9 @@
+#!/bin/bash
+set -Eeuo pipefail
+xset s off
+xset s noblank
+xset -dpms
+systemctl --user import-environment DISPLAY
+if [[ -n "${XAUTHORITY:-}" ]]; then systemctl --user import-environment XAUTHORITY; fi
+unclutter -idle 3 -root &
+systemctl --user restart quibar-browser.service

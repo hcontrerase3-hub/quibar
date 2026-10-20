@@ -38,8 +38,11 @@ def map_info():
         bounds = [float(v) for v in metadata.get("bounds", "-72.5,-38.2,-71.2,-37.3").split(",")]
         if len(bounds) != 4 or not all(math.isfinite(v) for v in bounds):
             raise ValueError("Límites inválidos")
-        return {"available": True, "minZoom": int(metadata.get("minzoom", 0)),
-                "maxZoom": int(metadata.get("maxzoom", 16)), "bounds": bounds,
+        minimum, maximum = int(metadata.get("minzoom", 0)), int(metadata.get("maxzoom", 16))
+        if not 0 <= minimum <= maximum <= 19:
+            raise ValueError("Niveles de zoom inválidos")
+        return {"available": True, "minZoom": minimum,
+                "maxZoom": maximum, "bounds": bounds,
                 "attribution": html.escape(metadata.get("attribution", "© OpenStreetMap contributors · ODbL")[:500])}
     except (sqlite3.Error, ValueError):
         raise HTTPException(503, "El paquete de mapas no es un MBTiles raster válido")

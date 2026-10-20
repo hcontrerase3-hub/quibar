@@ -22,7 +22,7 @@ function LocalMap({ latitude, longitude }: { latitude: number; longitude: number
   useEffect(() => {
     if (!container.current) return;
     const controller = new AbortController();
-    const map = L.map(container.current, { scrollWheelZoom: false, zoomControl: true }).setView([latitude, longitude], 13);
+    const map = L.map(container.current, { scrollWheelZoom: false, zoomControl: true, minZoom: 0, maxZoom: 19 }).setView([latitude, longitude], 13);
     L.circleMarker([latitude, longitude], { radius: 11, color: "#fff", weight: 3, fillColor: "#0b6661", fillOpacity: 1 }).addTo(map);
     fetch("/api/quibar/map", { signal: controller.signal }).then(response => {
       if (!response.ok) throw new Error();

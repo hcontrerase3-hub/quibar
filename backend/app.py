@@ -20,7 +20,8 @@ load_dotenv()
 
 MODEL = os.environ.get("QUIBAR_MODEL", "qwen3:14b-q4_K_M")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-KEEP_ALIVE = os.environ.get("QUIBAR_MODEL_KEEP_ALIVE", "30m")
+keep_alive_value = os.environ.get("QUIBAR_MODEL_KEEP_ALIVE", "30m")
+KEEP_ALIVE = int(keep_alive_value) if keep_alive_value.lstrip("-").isdigit() else keep_alive_value
 MODEL_TIMEOUT = float(os.environ.get("QUIBAR_MODEL_TIMEOUT", "6"))
 
 @asynccontextmanager

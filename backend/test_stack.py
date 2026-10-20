@@ -139,6 +139,37 @@ class StackAcceptance(unittest.TestCase):
             install_map(source)
         self.assertEqual(self.client.get("/tiles/0/0/0").content, b"png-test")
 
+    def test_spa_routes_and_unknown_api_paths_stay_separate(self):
+        dist = Path(self.tmp.name) / "dist"
+        dist.mkdir()
+        (dist / "index.html").write_text("<html>Quibar SPA</html>")
+        with patch.dict(os.environ, {"QUIBAR_DIST_DIR": str(dist)}):
+            self.assertIn("Quibar SPA", self.client.get("/admin").text)
+            self.assertEqual(self.client.get("/api/unknown").status_code, 404)
+            self.assertEqual(self.client.get("/missing.js").status_code, 404)
+
+    def test_user_deactivation_revokes_sessions_and_never_exposes_passwords(self):
+        self.login()
+        user_data = {"name": "Nuevo operador", "email": "new@example.test", "role": "Operador Territorial",
+                     "active": True, "password": "a-long-test-password"}
+        result = self.client.post("/api/quibar/admin/users", json=user_data, headers=self.csrf)
+        self.assertEqual(result.status_code, 201, result.text)
+        users = self.client.get("/api/quibar/admin/users").json()
+        target = next(u for u in users if u["email"] == user_data["email"])
+        self.assertNotIn("password", target)
+        self.assertNotIn("password_hash", target)
+        other = TestClient(app, client=("100.80.0.4", 1234), base_url="https://quibar.test")
+        login = other.post("/api/quibar/admin/session", json={"email": user_data["email"], "password": user_data["password"]})
+        self.assertEqual(login.status_code, 200)
+        self.assertIn("Secure", login.headers["set-cookie"])
+        self.assertIn("HttpOnly", login.headers["set-cookie"])
+        self.assertEqual(other.get("/api/quibar/admin/session").status_code, 200)
+        target.update(active=False, password="")
+        result = self.client.put(f"/api/quibar/admin/users/{target['id']}", json=target, headers=self.csrf)
+        self.assertEqual(result.status_code, 200, result.text)
+        self.assertEqual(other.get("/api/quibar/admin/session").status_code, 401)
+        other.close()
+
     def test_search_index_tracks_moderation_and_edits(self):
         from .db import text_ranking
         self.login()
@@ -168,6 +199,14 @@ class LegacyMigration(unittest.TestCase):
                 db.execute("INSERT INTO businesses VALUES (" + ",".join("?" for _ in keys) + ")",
                            [json.dumps(v) if isinstance(v, list) else int(v) if isinstance(v, bool) else v for v in record.values()])
             with patch.dict(os.environ, {"QUIBAR_DB_PATH": str(path)}):
+                from .cli import main as cli
+                backup = Path(directory) / "before.sqlite3"
+                with patch("sys.argv", ["quibar", "backup", str(backup)]):
+                    cli()
+                with closing(sqlite3.connect(backup)) as saved:
+                    names = {r[0] for r in saved.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                    self.assertNotIn("alembic_version", names)
+                    self.assertIn("businesses", names)
                 initialize()
                 self.assertEqual(approved(), [])
                 with session() as db:

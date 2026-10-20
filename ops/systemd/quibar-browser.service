@@ -1,0 +1,9 @@
+[Unit]
+Description=Navegador público Quibar en modo kiosco
+After=graphical-session.target
+[Service]
+ExecStart=/opt/quibar/ops/kiosk/browser.sh
+Restart=always
+RestartSec=2
+[Install]
+WantedBy=default.target

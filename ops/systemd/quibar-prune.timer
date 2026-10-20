@@ -1,0 +1,8 @@
+[Unit]
+Description=Limpieza diaria de datos de uso Quibar
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=300
+[Install]
+WantedBy=timers.target

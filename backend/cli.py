@@ -29,7 +29,8 @@ def main():
     maps.add_argument("--replace", action="store_true")
     sub.add_parser("prune", help="Eliminar métricas de más de 90 días y sesiones vencidas")
     args = parser.parse_args()
-    initialize()
+    if args.command != "backup":
+        initialize()
     if args.command in ("create-admin", "reset-password"):
         password = getpass.getpass("Contraseña (mínimo 12 caracteres): ")
         if password != getpass.getpass("Repite la contraseña: "):
@@ -50,6 +51,8 @@ def main():
         except ValueError as error:
             parser.error(str(error))
     elif args.command == "backup":
+        if not db_path().is_file():
+            parser.error("No existe la base que se quiere respaldar")
         if args.destination.exists() or args.destination.resolve() == db_path():
             parser.error("El destino debe ser un archivo nuevo")
         args.destination.parent.mkdir(parents=True, exist_ok=True)

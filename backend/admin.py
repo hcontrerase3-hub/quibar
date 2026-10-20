@@ -11,7 +11,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, UploadFile
 from PIL import Image, ImageOps, UnidentifiedImageError
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -83,6 +83,7 @@ def logout(request: Request, response: Response, user=Depends(identity)):
 
 
 class BusinessData(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     name: str = Field(min_length=2, max_length=150)
     category: str = Field(min_length=2, max_length=50)
     commune: str = Field(min_length=2, max_length=50)
@@ -190,6 +191,8 @@ def upload_photo(public_id: str, request: Request, file: UploadFile, user=Depend
         target = media_dir() / filename
         try:
             image = Image.open(io.BytesIO(content))
+            if image.format not in {"JPEG", "PNG", "WEBP"}:
+                raise HTTPException(422, "Usa una imagen JPEG, PNG o WebP")
             if image.width * image.height > 20_000_000:
                 raise HTTPException(422, "La imagen supera los 20 megapíxeles")
             image.load()

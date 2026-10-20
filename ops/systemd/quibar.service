@@ -1,0 +1,25 @@
+[Unit]
+Description=Quibar API y aplicación local
+After=network.target
+
+[Service]
+Type=simple
+User=quibar
+Group=quibar
+WorkingDirectory=/opt/quibar
+EnvironmentFile=/etc/quibar.env
+ExecStartPre=/opt/quibar/.venv/bin/python -m backend.cli migrate
+ExecStart=/opt/quibar/.venv/bin/python -m uvicorn backend.app:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1,::1
+Restart=always
+RestartSec=2
+TimeoutStartSec=120
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/quibar
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

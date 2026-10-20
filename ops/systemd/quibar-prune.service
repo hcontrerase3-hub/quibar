@@ -1,0 +1,16 @@
+[Unit]
+Description=Retención local de métricas y sesiones Quibar
+After=quibar.service
+
+[Service]
+Type=oneshot
+User=quibar
+Group=quibar
+WorkingDirectory=/opt/quibar
+EnvironmentFile=/etc/quibar.env
+ExecStart=/opt/quibar/.venv/bin/python -m backend.cli prune
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/quibar
+ProtectHome=true

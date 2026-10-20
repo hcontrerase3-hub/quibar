@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Home from "./page";
 import Admin from "./admin";
@@ -16,7 +16,7 @@ const record = { id: "sample", name: "Ficha aprobada", category: "Gastronomía" 
   offerings: ["Café"], hours: "09:00–18:00", keywords: "café", visual: "coffee", status: "Aprobado" as const,
   demo: true, latitude: null, longitude: null, whatsapp: "", featured: false, photos: [], legal_name: "", tax_id: "" };
 const response = (data: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } }));
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 test("el catálogo no recupera fichas estáticas cuando falla la API", async () => {
   vi.stubGlobal("fetch", vi.fn(() => response({ detail: "No disponible" }, 503)));
@@ -68,4 +68,16 @@ test("los QR de ruta y WhatsApp se muestran por separado y registran visualizaci
   expect(screen.getAllByTitle(/Abrir ruta en mapas|Contactar por WhatsApp/)).toHaveLength(2);
   await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.endsWith("/metrics"))).toBe(true));
   expect(screen.getByText(/tu celular puede necesitar conexión/)).toBeTruthy();
+});
+
+
+test("el tótem vuelve a la bienvenida tras sesenta segundos sin interacción", () => {
+  vi.useFakeTimers();
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+  render(<Home />);
+  fireEvent.click(screen.getByRole("button", { name: /Explorar comercios/ }));
+  expect(screen.queryByRole("button", { name: /Explorar comercios/ })).toBeNull();
+  act(() => { vi.advanceTimersByTime(60001); });
+  expect(screen.getByRole("button", { name: /Explorar comercios/ })).toBeTruthy();
 });

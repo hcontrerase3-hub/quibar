@@ -1,84 +1,83 @@
-# Quíbar · IA local para tótem
+# Quíbar · Guía comercial local
 
-Prototipo académico interactivo para descubrir PYMEs de Quilaco y Santa Bárbara. **Los ocho negocios, servicios y horarios son ficticios.** Utiliza la imagen de Quíbar proporcionada por Hugo.
+Tótem táctil para descubrir comercios de Quilaco y Santa Bárbara. El catálogo, el panel administrativo, los mapas y el asistente funcionan en el mismo equipo. **Las ocho fichas incluidas son ficticias**; la mascota de Quíbar fue aportada por Hugo.
 
-## Instalar por primera vez en macOS
+El stack sigue las guías 2.2 y 2.3: **React + Vite + TypeScript + Tailwind CSS**, FastAPI, SQLAlchemy/Alembic, SQLite WAL/FTS5, Leaflet, `qrcode.react` y Ollama/Qwen 3. En producción FastAPI entrega la SPA compilada; Node solo se necesita para desarrollo y compilación.
 
-1. Instala [Node.js](https://nodejs.org/) 22.13 o posterior y [Python](https://www.python.org/downloads/) 3.10 o posterior si todavía no los tienes.
-2. Instala la aplicación [Ollama para macOS](https://ollama.com/download/mac), ábrela y acepta instalar su comando de Terminal. Requiere macOS 14 o posterior.
-3. Copia `.env.example` como `.env` y ajusta ahí los puertos, la URL de Ollama y el modelo si es necesario. El modelo indicado en el informe está configurado en `QUIBAR_MODEL` (aproximadamente 9,3 GB; es una descarga única):
+## Preparar el entorno
 
-   ```bash
-   ollama pull qwen3:14b-q4_K_M
-   ```
-
-4. Descomprime `Quibar-IA-local-v6.zip`. En Terminal, entra a la carpeta `quibar-ia-local-v6` y ejecuta:
-
-   ```bash
-   chmod +x iniciar-quibar.command
-   ./iniciar-quibar.command
-   ```
-
-   Si el ZIP quedó en Descargas, puedes usar `cd ~/Downloads/quibar-ia-local-v6` antes de esos dos comandos.
-
-El iniciador instala las dependencias de Node y Python la primera vez, prepara la página, **carga el modelo local antes de abrir el tótem**, inicia FastAPI y abre `http://localhost:3000/` en modo tótem si Chrome está instalado. La carga inicial puede tardar; la Terminal muestra si la IA quedó lista o por qué Ollama no pudo cargarla. Mantén la ventana de Terminal abierta. `Ctrl+C` detiene los servidores. Si Ollama no está listo, el catálogo y las respuestas básicas siguen funcionando.
-
-Si macOS bloquea el doble clic sobre el archivo `.command`, ejecuta los comandos anteriores desde Terminal. Si el modelo de 14B no cabe cómodamente en el Mac, instala `ollama pull qwen3:4b` y cambia `QUIBAR_MODEL` a `qwen3:4b` en `.env` como variante de demostración.
-
-## Iniciar manualmente
-
-Desde la carpeta del proyecto, con Ollama abierto y el modelo descargado, usa dos ventanas de Terminal:
+Se recomienda Python 3.12 y Node.js 22.13 o posterior. Para IA local, instala Ollama y descarga el modelo acordado (aproximadamente 9,3 GB):
 
 ```bash
+ollama pull qwen3:14b-q4_K_M
 python3 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.txt
-.venv/bin/python -m backend.preload
-set -a; . ./.env; set +a
-.venv/bin/python -m uvicorn backend.app:app --host "$QUIBAR_API_HOST" --port "$QUIBAR_API_PORT"
-```
-
-En la segunda ventana:
-
-```bash
+.venv/bin/python -m pip install -r backend/requirements.lock
 npm ci
-npm run build
-set -a; . ./.env; set +a
-./node_modules/.bin/next start --hostname "$QUIBAR_WEB_HOST" -p "$QUIBAR_WEB_PORT"
 ```
 
-Abre `http://localhost:3000/`. La página, la API, Ollama y SQLite están configurados para el mismo computador. La aplicación no requiere claves ni proveedores de IA en la nube; la descarga inicial de Ollama, el modelo y las dependencias sí requiere conexión a Internet.
+Copia `.env.example` a `.env` **si todavía no existe**. Ahí puedes ajustar puertos, rutas y modelo. No publiques ese archivo. La descarga inicial de dependencias, del modelo y de cartografía requiere conexión; la atención local no usa proveedores de IA en la nube.
 
-## Cómo funciona
-
-1. Las fichas de ejemplo se cargan desde `data/catalog.json` a `backend/quibar.sqlite3` al primer inicio. Solo los registros con estado `Aprobado` aparecen en `/api/quibar/catalog` y pueden ser recuperados para una respuesta.
-2. `backend/rag.py` encuentra hasta tres fichas pertinentes por nombre, rubro, comuna y servicios. Si la consulta menciona un nombre o servicio que no figura, Quíbar reconoce la ausencia de ese registro.
-3. `backend/app.py` envía únicamente los datos aprobados recuperados y el contexto reciente a Ollama. Qwen3 selecciona IDs de fichas y **redacta una respuesta breve y natural** dentro de un esquema JSON. El servidor valida los IDs, nombres y datos numéricos antes de mostrarla. Si falla la validación, utiliza una respuesta compuesta con SQLite. Los saludos como “Hola” se responden con el modelo sin inventar negocios.
-4. Las preguntas de seguimiento usan las fichas de la respuesta anterior. Si Ollama falla o tarda más del límite, se responde en modo básico. La interfaz distingue “IA local” de “Modo básico” para no atribuir al modelo una respuesta de respaldo. La carga previa y la espera ampliada permiten que el modelo de 14B responda en equipos donde tarda más de ocho segundos.
-
-La validación automática reduce riesgos, pero el texto generado podría contener afirmaciones difíciles de comprobar mecánicamente. Antes de uso público, comprueba manualmente la batería de 10 preguntas con el modelo y el catálogo reales. La meta de menos de 5 segundos se mide sobre el hardware final.
-
-La base SQLite se crea en `backend/quibar.sqlite3`; para restablecer los ocho ejemplos, detén el servidor y elimina ese archivo. El JSON del paquete es el catálogo de demostración inicial. Para probar la aprobación, cambia el estado de un registro en SQLite, reinicia el servidor y actualiza la página. No hay un panel de administración en esta versión.
-
-## Probar los flujos
+## Ejecutar localmente
 
 ```bash
-.venv/bin/python -m unittest backend.test_quibar -v
-curl -s "http://127.0.0.1:${QUIBAR_API_PORT:-8000}/api/quibar/health"
-curl -s -X POST "http://127.0.0.1:${QUIBAR_API_PORT:-8000}/api/quibar/chat" \
-  -H 'Content-Type: application/json' \
-  -d '{"query":"Un café en Quilaco"}'
+npm run build
+.venv/bin/python -m backend.cli migrate
+.venv/bin/python -m backend.cli create-admin operador@example.com --name 'Administrador local'
+npm start
 ```
 
-La última respuesta debe indicar `mode: "ia_local"` cuando Qwen3 esté funcionando y responda a tiempo, o `mode: "basico"` si está desconectado. Prueba también “¿Conoces Hotel Estrella Austral?” para verificar una ausencia y “¿Y su horario?” después de abrir una ficha mediante la conversación.
+Abre `http://127.0.0.1:8000/` para el tótem y `/admin` para administrar. La creación del usuario pide una contraseña de al menos 12 caracteres; no existen credenciales predeterminadas. `npm start` usa el host y puerto de API configurados en `.env`.
 
-Prueba “Hola” para verificar un saludo redactado por la IA (`mode: "ia_local"`, sin fichas), seguido de “Quiero tomar un café en Quilaco” y “¿Y su horario?”.
+Para desarrollar, inicia `.venv/bin/python -m backend.run` en una terminal y `npm run dev` en otra. Vite usa `127.0.0.1:3000` y envía `/api`, `/media` y `/tiles` a FastAPI. El iniciador `./iniciar-quibar.command` prepara la compilación, precarga Ollama y abre el tótem en macOS.
 
-El objetivo académico de respuesta inferior a cinco segundos requiere **medición en el Mac y tótem finales**: depende del tiempo de carga del modelo y de sus recursos. El servidor espera hasta 110 segundos por Ollama antes de pasar al modo básico; la página espera hasta 120 segundos y el puente local hasta 125. La primera carga puede ser mucho más lenta que las consultas posteriores. El paquete no incluye el modelo descargado.
+## Catálogo y administración
 
-## Archivos principales
+- Un **Administrador** crea usuarios y aprueba, edita o suspende fichas. Un **Operador Territorial** prepara fichas y fotografías para revisión; sus cambios se guardan pendientes. Solo los registros aprobados de rubros activos son públicos y elegibles para Quíbar.
+- Las fichas reales requieren coordenadas y contacto verificados antes de aprobarse. Los ejemplos migrados conservan su información original: no se inventan ubicaciones, teléfonos ni fotos.
+- Las imágenes se guardan como WebP local, sin metadatos originales: máximo ocho por ficha, 8 MB y 20 megapíxeles por archivo. Se pueden ordenar, seleccionar como portada y añadir texto alternativo.
+- Los cambios generan auditoría con datos anteriores y posteriores. Las métricas son anónimas y se conservan durante 90 días; `QR_MOSTRADO` mide la visualización del código, no confirma su escaneo.
+- El catálogo abierto se actualiza cada cinco segundos. Si la API falla, la interfaz muestra la indisponibilidad; no vuelve a publicar una copia estática de fichas suspendidas.
 
-- `app/page.tsx`, `app/kiosk.css`: interfaz táctil, conversación, filtros y fichas.
-- `data/catalog.json`: ocho fichas ficticias marcadas como ejemplo y aprobadas.
-- `backend/db.py`, `backend/rag.py`, `backend/app.py`: SQLite, recuperación y API local con Ollama.
-- `backend/test_quibar.py`: preguntas de aceptación, seguimiento y exclusión de fichas suspendidas.
-- `public/quibar-angostura-original.png`: mascota aportada para el proyecto.
+`data/catalog.json` es la semilla inicial. Alembic carga esos registros solo al crear la base; si encuentra la tabla antigua `businesses`, importa sus datos y conserva esa tabla. **No elimines la base para actualizar el catálogo**. En una instalación existente, realiza un respaldo antes de migrar:
+
+```bash
+.venv/bin/python -m backend.cli backup /tmp/quibar-respaldo.sqlite3
+.venv/bin/python -m backend.cli migrate
+```
+
+## Mapas y QR
+
+Leaflet obtiene teselas raster del archivo MBTiles local indicado por `QUIBAR_TILES_PATH`. Para instalar un paquete de la zona, con licencia que permita su uso local:
+
+```bash
+.venv/bin/python -m backend.cli import-map /ruta/quilaco-santa-barbara.mbtiles
+```
+
+El importador verifica integridad y formato (PNG/JPEG/WebP), y sustituye el archivo de forma atómica. Para cambiar un mapa existente, añade `--replace`. Conserva la atribución y procedencia del paquete. No se descargan automáticamente teselas desde el servicio público de OpenStreetMap.
+
+Las fichas con coordenadas muestran ubicación y QR de ruta. Un QR separado permite abrir WhatsApp cuando existe un contacto. La generación no necesita internet; la navegación y mensajería del teléfono dependen de sus aplicaciones, mapas descargados y conectividad. Si falta cartografía o coordenadas, la interfaz lo indica.
+
+## Asistente local
+
+FastAPI recupera como máximo tres fichas aprobadas mediante búsqueda normalizada y ranking FTS5. Envía su contenido a Ollama; valida IDs, nombres y datos numéricos de la respuesta. Si la consulta no tiene coincidencias, evita la generación abierta. Si el modelo falla o supera el plazo configurado, devuelve una respuesta básica con datos del catálogo.
+
+El plazo recomendado es de seis segundos (`QUIBAR_MODEL_TIMEOUT`); la interfaz limita la espera a doce segundos. `QUIBAR_MODEL_KEEP_ALIVE=-1` mantiene el modelo cargado en el equipo dedicado. La validación reduce invenciones, pero **no demuestra una tasa de alucinación cero**. El requisito de respuesta inferior a cinco segundos debe medirse con Qwen 3 y el hardware final; no está garantizado por el código.
+
+## Comprobaciones
+
+```bash
+npm test
+npm run build
+.venv/bin/python -m unittest backend.test_quibar backend.test_stack -v
+curl -s http://127.0.0.1:8000/api/quibar/health
+curl -s -X POST http://127.0.0.1:8000/api/quibar/chat \
+  -H 'Content-Type: application/json' -d '{"query":"Un café en Quilaco"}'
+```
+
+Las pruebas usan bases temporales y transportes de IA simulados; no modifican el catálogo local ni necesitan Ollama. GitHub Actions ejecuta ambas suites y compila la SPA. Para mantenimiento están disponibles `backend.cli reset-password`, `backup`, `import-map` y `prune`.
+
+## Despliegue y evidencia académica
+
+Consulta [la instalación en Ubuntu y el modo kiosco](docs/deployment.md) y [la correspondencia con las guías y pruebas pendientes](docs/implementation-status.md). Los scripts preparan systemd, Chromium/Openbox y retención de datos. La administración remota se realiza por Tailscale Serve y ACL privadas; la API escucha únicamente en loopback.
+
+Los archivos persistentes (`*.sqlite3*`, medios, cartografía), las credenciales y los entornos locales están excluidos de Git. Las fotografías de comercios suspendidos también quedan fuera del acceso público.

@@ -1,0 +1,11 @@
+{
+  "DeveloperToolsAvailability": 2,
+  "DownloadRestrictions": 3,
+  "PasswordManagerEnabled": false,
+  "BrowserGuestModeEnabled": false,
+  "TranslateEnabled": false,
+  "DefaultNotificationsSetting": 2,
+  "DefaultPopupsSetting": 2,
+  "URLBlocklist": ["*"],
+  "URLAllowlist": ["http://127.0.0.1:8000/*"]
+}

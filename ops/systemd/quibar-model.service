@@ -1,0 +1,22 @@
+[Unit]
+Description=Precarga del modelo local Quibar
+Wants=ollama.service
+After=ollama.service quibar.service
+PartOf=ollama.service
+
+[Service]
+Type=oneshot
+User=quibar
+Group=quibar
+WorkingDirectory=/opt/quibar
+EnvironmentFile=/etc/quibar.env
+ExecStart=/opt/quibar/.venv/bin/python -m backend.preload
+TimeoutStartSec=120
+RemainAfterExit=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
