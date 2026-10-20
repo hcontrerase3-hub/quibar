@@ -19,7 +19,7 @@ from backend.rag import retrieve
 
 class QuibarAcceptance(unittest.TestCase):
     def setUp(self):
-        self.model_patches = [patch("backend.app.MODEL", "qwen3:14b-q4_K_M"), patch("backend.preload.MODEL", "qwen3:14b-q4_K_M")]
+        self.model_patches = [patch("backend.app.MODEL", "qwen3:14b-q4_K_M"), patch("backend.preload.MODEL", "qwen3:14b-q4_K_M"), patch("backend.app.KEEP_ALIVE", "30m"), patch("backend.preload.KEEP_ALIVE", "30m")]
         for item in self.model_patches:
             item.start()
         self.directory = tempfile.TemporaryDirectory()

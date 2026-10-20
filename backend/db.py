@@ -86,3 +86,22 @@ def approved() -> list[dict]:
 def lookups(db):
     return {"communes": [r.nombre for r in db.scalars(select(Comuna).order_by(Comuna.nombre))],
             "categories": [r.nombre for r in db.scalars(select(Rubro).where(Rubro.activo.is_(True)).order_by(Rubro.nombre))]}
+
+
+def text_ranking(query: str) -> dict[str, float]:
+    """FTS5 aporta ranking; los filtros de aprobación se vuelven a aplicar aquí."""
+    import re
+    from sqlalchemy import text
+    tokens = re.findall(r"[^\W_]+", query.lower(), re.UNICODE)[:40]
+    if not tokens:
+        return {}
+    expression = " OR ".join(f'"{token}"' for token in tokens if len(token) > 2)
+    if not expression:
+        return {}
+    with session() as db:
+        rows = db.execute(text("""SELECT c.public_id, bm25(comercio_fts) AS rank
+            FROM comercio_fts JOIN comercio c ON c.id=comercio_fts.rowid
+            JOIN rubro r ON r.id=c.id_rubro
+            WHERE comercio_fts MATCH :query AND c.estado_moderacion='Aprobado' AND r.activo=1
+            ORDER BY rank LIMIT 30"""), {"query": expression})
+        return {row[0]: row[1] for row in rows}

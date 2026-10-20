@@ -5,7 +5,7 @@ import time
 
 import httpx
 
-from .app import MODEL, OLLAMA_URL
+from .app import KEEP_ALIVE, MODEL, OLLAMA_URL
 
 
 def main() -> int:
@@ -30,7 +30,7 @@ def main() -> int:
         print(f"Cargando {MODEL} en este equipo; la primera vez puede tardar…", flush=True)
         try:
             response = client.post(f"{OLLAMA_URL}/api/generate",
-                                   json={"model": MODEL, "stream": False, "keep_alive": "30m"},
+                                   json={"model": MODEL, "stream": False, "keep_alive": KEEP_ALIVE},
                                    timeout=90)
             response.raise_for_status()
             if not response.json().get("done"):

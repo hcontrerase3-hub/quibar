@@ -52,7 +52,7 @@ class StackAcceptance(unittest.TestCase):
         self.assertEqual(len(approved()), 8)
         with closing(sqlite3.connect(os.environ["QUIBAR_DB_PATH"])) as db, db:
             self.assertEqual(db.execute("PRAGMA journal_mode").fetchone()[0], "wal")
-            self.assertEqual(db.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0001_stack")
+            self.assertEqual(db.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0002_search")
         self.assertNotIn("tax_id", self.client.get("/api/quibar/catalog").json()[0])
 
     def test_auth_network_csrf_logout_and_throttle(self):
@@ -125,6 +125,34 @@ class StackAcceptance(unittest.TestCase):
         self.assertEqual(self.client.post("/api/quibar/metrics", json={"event": "QR_MOSTRADO", "business_id": "grano-nativo"}).status_code, 202)
         self.login()
         self.assertEqual(self.client.get("/api/quibar/admin/metrics").json()[0]["count"], 1)
+
+    def test_map_import_is_atomic_and_refuses_accidental_replacement(self):
+        from .maps import install_map
+        source = Path(self.tmp.name) / "source.mbtiles"
+        with closing(sqlite3.connect(source)) as db, db:
+            db.executescript("CREATE TABLE metadata (name TEXT,value TEXT); CREATE TABLE tiles (zoom_level INT,tile_column INT,tile_row INT,tile_data BLOB);")
+            db.execute("INSERT INTO metadata VALUES ('format','png')")
+            db.execute("INSERT INTO tiles VALUES (0,0,0,?)", (b"png-test",))
+        result = install_map(source)
+        self.assertEqual(result["tiles"], 1)
+        with self.assertRaises(ValueError):
+            install_map(source)
+        self.assertEqual(self.client.get("/tiles/0/0/0").content, b"png-test")
+
+    def test_search_index_tracks_moderation_and_edits(self):
+        from .db import text_ranking
+        self.login()
+        row = self.row()
+        row["keywords"] = "cafeteria especialprueba"
+        self.client.put(f"/api/quibar/admin/businesses/{row['id']}", json=row, headers=self.csrf)
+        self.assertIn(row["id"], text_ranking("especialprueba"))
+        row["status"] = "Suspendido"
+        self.client.put(f"/api/quibar/admin/businesses/{row['id']}", json=row, headers=self.csrf)
+        self.assertNotIn(row["id"], text_ranking("especialprueba"))
+        with sqlite3.connect(os.environ["QUIBAR_DB_PATH"]) as db:
+            with self.assertRaises(sqlite3.IntegrityError):
+                db.execute("DELETE FROM registro_auditoria")
+        db.close()
 
 
 class LegacyMigration(unittest.TestCase):

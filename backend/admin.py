@@ -190,6 +190,8 @@ def upload_photo(public_id: str, request: Request, file: UploadFile, user=Depend
         target = media_dir() / filename
         try:
             image = Image.open(io.BytesIO(content))
+            if image.width * image.height > 20_000_000:
+                raise HTTPException(422, "La imagen supera los 20 megapíxeles")
             image.load()
             image = ImageOps.exif_transpose(image).convert("RGB")
             image.thumbnail((1600, 1600))

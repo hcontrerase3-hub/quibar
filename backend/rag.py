@@ -32,7 +32,7 @@ def category_of(query: str) -> str | None:
     return next((category for category, pattern in CATEGORIES if re.search(pattern, q)), None)
 
 
-def retrieve(query: str, rows: list[dict], context_ids: list[str] | None = None) -> list[dict]:
+def retrieve(query: str, rows: list[dict], context_ids: list[str] | None = None, text_scores: dict[str, float] | None = None) -> list[dict]:
     """No recupera negocios suspendidos, ni inventa candidatos ante nombres desconocidos."""
     rows = [r for r in rows if r["status"] == "Aprobado"]
     q = normalize(query)
@@ -56,7 +56,7 @@ def retrieve(query: str, rows: list[dict], context_ids: list[str] | None = None)
             continue
         if category and row["category"] != category:
             continue
-        haystack = normalize(" ".join([row["name"], row["category"], row["summary"],
+        haystack = normalize(" ".join([row["name"], row["category"], row["summary"], row["description"],
                                    *row["offerings"], row["keywords"]]))
         matches = sum(word in haystack for word in tokens)
         # Un detalle pedido (p. ej. pizza) debe existir en la ficha; el rubro solo no basta.
@@ -65,7 +65,7 @@ def retrieve(query: str, rows: list[dict], context_ids: list[str] | None = None)
         score = matches * 3 + (4 if category else 0) + (1 if commune else 0)
         if score or (commune and not tokens):
             candidates.append((score, row))
-    return [row for _, row in sorted(candidates, key=lambda pair: (-pair[0], pair[1]["name"]))[:3]]
+    return [row for _, row in sorted(candidates, key=lambda pair: (-pair[0], (text_scores or {}).get(pair[1]["id"], 0), pair[1]["name"]))[:3]]
 
 
 def intent_of(query: str) -> str:

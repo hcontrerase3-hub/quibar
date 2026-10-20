@@ -13,14 +13,15 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-from .db import approved, initialize
+from .db import approved, initialize, text_ranking
 from .rag import compose, intent_of, normalize, retrieve
 
 load_dotenv()
 
 MODEL = os.environ.get("QUIBAR_MODEL", "qwen3:14b-q4_K_M")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-MODEL_TIMEOUT = float(os.environ.get("QUIBAR_MODEL_TIMEOUT", "110"))
+KEEP_ALIVE = os.environ.get("QUIBAR_MODEL_KEEP_ALIVE", "30m")
+MODEL_TIMEOUT = float(os.environ.get("QUIBAR_MODEL_TIMEOUT", "6"))
 
 @asynccontextmanager
 async def lifespan(_app):
@@ -137,7 +138,7 @@ async def generate_with_model(request: ChatRequest, candidates: list[dict], inte
         ],
         "format": schema, "stream": False, "think": False,
         "options": {"temperature": 0.2, "top_p": 0.9, "num_predict": 180},
-        "keep_alive": "30m",
+        "keep_alive": KEEP_ALIVE,
     }
     async with httpx.AsyncClient(timeout=MODEL_TIMEOUT, trust_env=False) as client:
         response = await client.post(f"{OLLAMA_URL}/api/chat", json=payload)
@@ -159,13 +160,22 @@ def catalog() -> list[dict]:
     return approved()
 
 
+def record_chat_metric(start):
+    from .db import session
+    from .models import Metrica
+    with session() as db:
+        db.add(Metrica(tipo_evento="CHAT_QUIBAR", latencia_ms=int((time.monotonic() - start) * 1000)))
+        db.commit()
+
+
 @app.post("/api/quibar/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     start = time.monotonic()
     rows = approved()
     greeting = is_greeting(request.query)
-    candidates = [] if greeting else retrieve(request.query, rows, request.context_ids)
+    candidates = [] if greeting else retrieve(request.query, rows, request.context_ids, text_ranking(request.query))
     if not candidates and not greeting:
+        record_chat_metric(start)
         return ChatResponse(reply=compose([], "recommend", unknown=True), matches=[], mode="basico",
                             elapsed_ms=int((time.monotonic() - start) * 1000))
 
@@ -181,11 +191,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
     except (httpx.HTTPError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
         # El catálogo sigue funcionando si Ollama cae, tarda demasiado o responde mal.
         logging.warning("Quíbar usó modo básico porque Ollama no respondió (%s): %s", type(error).__name__, error)
-    from .db import session
-    from .models import Metrica
-    with session() as db:
-        db.add(Metrica(tipo_evento="CHAT_QUIBAR", latencia_ms=int((time.monotonic() - start) * 1000)))
-        db.commit()
+    record_chat_metric(start)
     result = [Match(**{key: row[key] for key in ("id", "name", "category", "commune")}) for row in selected]
     return ChatResponse(reply=reply, matches=result,
                         mode=mode, elapsed_ms=int((time.monotonic() - start) * 1000))

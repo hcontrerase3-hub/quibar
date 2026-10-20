@@ -24,6 +24,9 @@ def main():
     reset.add_argument("email")
     backup = sub.add_parser("backup", help="Respaldo SQLite consistente, incluyendo WAL")
     backup.add_argument("destination", type=Path)
+    maps = sub.add_parser("import-map", help="Instalar un mapa MBTiles raster verificado")
+    maps.add_argument("source", type=Path)
+    maps.add_argument("--replace", action="store_true")
     sub.add_parser("prune", help="Eliminar métricas de más de 90 días y sesiones vencidas")
     args = parser.parse_args()
     initialize()
@@ -54,6 +57,12 @@ def main():
             with closing(sqlite3.connect(args.destination)) as target, target:
                 source.backup(target)
         args.destination.chmod(0o600)
+    elif args.command == "import-map":
+        from .maps import install_map
+        try:
+            print(install_map(args.source, args.replace))
+        except ValueError as error:
+            parser.error(str(error))
     elif args.command == "prune":
         import time
         with session() as db:

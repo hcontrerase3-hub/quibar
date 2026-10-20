@@ -1,6 +1,8 @@
 """Recursos públicos: mapas locales, fotos aprobadas y métricas sin datos personales."""
 from contextlib import closing
 import os
+import html
+import math
 import sqlite3
 from pathlib import Path
 from typing import Literal
@@ -34,9 +36,11 @@ def map_info():
         if fmt not in ("png", "jpg", "jpeg", "webp"):
             raise ValueError("Solo teselas raster")
         bounds = [float(v) for v in metadata.get("bounds", "-72.5,-38.2,-71.2,-37.3").split(",")]
+        if len(bounds) != 4 or not all(math.isfinite(v) for v in bounds):
+            raise ValueError("Límites inválidos")
         return {"available": True, "minZoom": int(metadata.get("minzoom", 0)),
                 "maxZoom": int(metadata.get("maxzoom", 16)), "bounds": bounds,
-                "attribution": "© OpenStreetMap contributors · ODbL"}
+                "attribution": html.escape(metadata.get("attribution", "© OpenStreetMap contributors · ODbL")[:500])}
     except (sqlite3.Error, ValueError):
         raise HTTPException(503, "El paquete de mapas no es un MBTiles raster válido")
 
