@@ -26,6 +26,24 @@ El mapa raster y el grafo vial son paquetes distintos. Instalar un MBTiles no in
 
 Los servicios principales arrancan aunque falten cartografía, grafo, voz u Ollama. Sin mapa se muestra un aviso y la lista; sin origen verificado no se solicita una ruta; sin camino válido se informa la limitación y no se dibuja una línea recta como carretera.
 
+## Generar los archivos con Docker
+
+En Linux, ejecutar desde el repositorio:
+
+```bash
+ops/maps/prepare.sh
+./quibar respaldo
+./quibar importar-mapa .quibar/cartography/circuit.mbtiles
+./quibar preparar-rutas .quibar/cartography/region.osm.pbf
+./quibar logs routing
+```
+
+La primera preparación descarga el PBF de Chile desde [Geofabrik](https://download.geofabrik.de/south-america/chile.html), comprueba su MD5 publicado y utiliza Osmium y Mapnik dentro de Docker. No requiere QGIS ni herramientas geográficas instaladas en el anfitrión. El recorte vial tiene margen para conexiones; las geometrías se conservan con la estrategia `complete_ways`. El mapa raster cubre el circuito en zoom 8–16, con una tesela adicional de margen por nivel, y representa calles, caminos, agua, vegetación, edificios y nombres existentes en OSM. Es un estilo simplificado, sin relieve ni imágenes satelitales; no certifica accesos ni incorpora comercios al catálogo.
+
+Los archivos y capas intermedias quedan en `.quibar/cartography/`, excluidos de Git. `provenance.json` conserva fuente, licencia ODbL, fecha de preparación, encabezado OSM y SHA256 de los paquetes. Conservarlo junto a los archivos al transferirlos a otro equipo. La preparación necesita conexión y espacio para la descarga, la imagen Docker y los datos generados; luego el mapa y las rutas funcionan localmente.
+
+Repetir el comando reutiliza archivos existentes. Para actualizar la fuente, archivar primero toda esa carpeta y volver a prepararla; no se reemplazan paquetes silenciosamente. Una generación interrumpida conserva `.part` y obliga a revisarlo o archivarlo antes de reintentar. Si ya hay paquetes instalados, respaldar antes y agregar `--replace` a los comandos de importación. En Windows/macOS se pueden importar los archivos preparados en Linux con el lanzador correspondiente.
+
 ## Servicios y datos persistentes
 
 - `routing`: imagen oficial de Valhalla fijada por digest, dos hilos, sin puerto publicado por defecto. Espera un PBF en `/state/routing` y construye el grafo allí. No descarga datos viales ni reconstruye desde un ejemplo al iniciar. El paquete es diferente en desarrollo y producción.

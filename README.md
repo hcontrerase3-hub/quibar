@@ -70,6 +70,8 @@ La aplicación incluye Valhalla y Piper en Docker. Antes del uso real, configura
 ./quibar logs routing
 ```
 
+Si aún no tienes esos archivos, `ops/maps/prepare.sh` los prepara en Linux con Docker: descarga y verifica OSM de Geofabrik, recorta el circuito y genera un mapa raster sin descargar teselas públicas. Los resultados quedan en `.quibar/cartography/`; consulta [los pasos completos](docs/map-circuit.md#generar-los-archivos-con-docker).
+
 Las fichas ficticias existentes no reciben coordenadas inventadas. Si falta mapa, origen o grafo, la interfaz lo informa y mantiene la consulta de lugares. Consulta [preparación del circuito, voz y pruebas](docs/map-circuit.md).
 
 ## Catálogo y administración
