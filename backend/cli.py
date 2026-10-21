@@ -17,6 +17,7 @@ def main():
     parser = argparse.ArgumentParser(description="Administración local de Quíbar")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("migrate", help="Aplicar migraciones y cargar catálogo inicial")
+    sub.add_parser("setup-admin", help="Crear el primer administrador si no existe")
     admin = sub.add_parser("create-admin", help="Crear administrador sin credenciales por defecto")
     admin.add_argument("email")
     admin.add_argument("--name", required=True)
@@ -31,6 +32,16 @@ def main():
     args = parser.parse_args()
     if args.command != "backup":
         initialize()
+    if args.command == "setup-admin":
+        with session() as db:
+            if db.scalar(select(Usuario).where(Usuario.rol == "Administrador", Usuario.activo.is_(True))):
+                print("Ya existe un administrador activo. Abre /admin para iniciar sesión.")
+                return
+        args.email = input("Correo del primer administrador: ").strip()
+        args.name = input("Nombre completo: ").strip()
+        if not args.email or "@" not in args.email or not args.name:
+            parser.error("Indica un correo y nombre válidos")
+        args.command = "create-admin"
     if args.command in ("create-admin", "reset-password"):
         password = getpass.getpass("Contraseña (mínimo 12 caracteres): ")
         if password != getpass.getpass("Repite la contraseña: "):

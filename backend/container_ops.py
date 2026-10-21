@@ -84,6 +84,11 @@ def import_data(source):
             if target.is_dir() and not any(target.iterdir()):
                 target.rmdir()
             item.rename(target)
+    if os.geteuid() == 0:
+        # Migrations and any WAL/SHM files must use the application's identity.
+        os.setgroups([10001])
+        os.setgid(10001)
+        os.setuid(10001)
     initialize()
     print('Datos importados; respaldo previo a migrar: /state/pre-migration.tar.gz')
 
@@ -100,18 +105,21 @@ def model():
                 if attempt == 29:
                     raise RuntimeError('Ollama no responde; Quíbar sigue en modo básico')
                 time.sleep(2)
-        print(f'Descargando/verificando {name}. La aplicación sigue disponible.', flush=True)
-        with client.stream('POST', f'{url}/api/pull', json={'name': name, 'stream': True}, timeout=1800) as response:
-            response.raise_for_status()
-            import json
-            last_status = None
-            for line in response.iter_lines():
-                message = json.loads(line)
-                if message.get('error'):
-                    raise RuntimeError(message['error'])
-                if message.get('status') != last_status:
-                    last_status = message.get('status')
-                    print(last_status, flush=True)
+        if os.environ.get('QUIBAR_OLLAMA_MODE') != 'remote' and os.environ.get('QUIBAR_MODEL_PULL', '1') == '1':
+            print(f'Descargando/verificando {name}. La aplicación sigue disponible.', flush=True)
+            with client.stream('POST', f'{url}/api/pull', json={'name': name, 'stream': True}, timeout=1800) as response:
+                response.raise_for_status()
+                import json
+                last_status = None
+                for line in response.iter_lines():
+                    message = json.loads(line)
+                    if message.get('error'):
+                        raise RuntimeError(message['error'])
+                    if message.get('status') != last_status:
+                        last_status = message.get('status')
+                        print(last_status, flush=True)
+        else:
+            print(f'Usando modelo existente en servidor remoto: {name}; no se descargarán modelos.', flush=True)
     from .preload import main
     raise SystemExit(main())
 
@@ -123,6 +131,15 @@ def main():
     args = parser.parse_args()
     if args.action in ('serve', 'develop'):
         initialize()
+        # Uvicorn's reload supervisor does not remove a stale Unix socket.
+        import socket
+        with closing(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)) as probe:
+            try:
+                probe.connect(SOCKET)
+            except (FileNotFoundError, ConnectionRefusedError):
+                Path(SOCKET).unlink(missing_ok=True)
+            else:
+                raise RuntimeError('Ya existe una API escuchando en este volumen de socket')
         import uvicorn
         # No TCP listener: only nginx, with access to this volume, supplies headers.
         uvicorn.run('backend.app:app', uds=SOCKET, proxy_headers=True, forwarded_allow_ips='*',

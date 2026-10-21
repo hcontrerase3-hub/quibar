@@ -1,0 +1,28 @@
+services:
+  app:
+    command: [python, -m, backend.container_ops, develop]
+    volumes:
+      - ./backend:/app/backend:ro
+  web:
+    image: node:22-bookworm-slim
+    working_dir: /workspace
+    command: [sh, -c, 'npm ci && npm run dev -- --host 0.0.0.0']
+    ports: ['127.0.0.1:${QUIBAR_WEB_PORT:-3000}:3000']
+    environment:
+      QUIBAR_PROXY_URL: http://nginx:8080
+      QUIBAR_WEB_PORT: '3000'
+      QUIBAR_POLL: 'true'
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/node_modules
+    depends_on:
+      nginx: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 4s
+      retries: 30
+      start_period: 60s
+volumes:
+  node_modules:

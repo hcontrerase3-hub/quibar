@@ -1,0 +1,102 @@
+#!/bin/bash
+set -Eeuo pipefail
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
+usage() {
+  echo 'Uso: ./quibar [--dev] iniciar|desarrollar|detener|logs|probar|admin|respaldo|importar-mapa|importar-datos [argumentos]'
+}
+[[ $# -gt 0 ]] || { usage; exit 0; }
+dev=0
+if [[ "$1" == --dev ]]; then dev=1; shift; fi
+action="${1:-}"
+[[ $# -gt 0 ]] && shift
+[[ "$action" != desarrollar ]] || { dev=1; action=iniciar; }
+case "$action" in iniciar|detener|logs|probar|admin|respaldo|importar-mapa|importar-datos) ;; *) usage; exit 1 ;; esac
+command -v docker >/dev/null || { echo 'Instala Docker Desktop o Docker Engine con Compose.' >&2; exit 1; }
+docker compose version >/dev/null
+docker info >/dev/null 2>&1 || { echo 'Inicia Docker y comprueba el acceso al motor.' >&2; exit 1; }
+umask 077
+mkdir -p .quibar
+config=.quibar/production.env
+project=quibar
+if [[ "$dev" == 1 ]]; then config=.quibar/development.env; project=quibar-dev; fi
+if [[ ! -f "$config" ]]; then
+  cp docker.env.example "$config"
+  if [[ "$dev" == 1 ]]; then printf '\nQUIBAR_PORT=8001\n' >> "$config"; fi
+fi
+lock=""
+cleanup() { if [[ -n "$lock" ]]; then rmdir "$lock"; fi; }
+trap cleanup EXIT
+if [[ "$action" != logs && "$action" != probar ]]; then
+  lock=".quibar/$project.lock"
+  mkdir "$lock" 2>/dev/null || { echo "Otra operación está activa ($lock)." >&2; lock=""; exit 1; }
+fi
+# Treat configuration as data, never source it as executable shell code.
+mode=$(sed -n 's/^QUIBAR_OLLAMA_MODE=//p' "$config" | tail -n 1 | tr -d '\r')
+dc=(docker compose --project-name "$project" --env-file "$config" -f compose.yaml)
+[[ "$dev" != 1 ]] || dc+=(-f compose.dev.yaml)
+case "$mode" in
+  native)
+    export QUIBAR_MODEL_PULL=1
+    if [[ "$(uname -s)" == Linux ]]; then
+      dc+=(-f compose.native-linux.yaml)
+      export OLLAMA_URL=http://127.0.0.1:11434
+    else
+      export OLLAMA_URL=http://host.docker.internal:11434
+    fi ;;
+  docker) export OLLAMA_URL=http://ollama:11434 QUIBAR_MODEL_PULL=1 ;;
+  remote)
+    remote_url=$(sed -n 's/^OLLAMA_URL=//p' "$config" | tail -n 1 | tr -d '\r')
+    case "$remote_url" in http://*|https://*) ;; *) echo 'Configura OLLAMA_URL con la URL del servidor remoto' >&2; exit 1 ;; esac
+    export OLLAMA_URL="$remote_url" QUIBAR_MODEL_PULL=0 ;;
+  *) echo 'QUIBAR_OLLAMA_MODE debe ser docker, native o remote' >&2; exit 1 ;;
+esac
+compose() { "${dc[@]}" --profile tools --profile model --profile ollama "$@"; }
+stopped() {
+  [[ -z "$(compose ps --status running -q app maintenance)" ]] || {
+    echo 'Detén la aplicación antes de importar datos: ./quibar detener (o --dev detener).' >&2; exit 1;
+  }
+}
+case "$action" in
+  iniciar)
+    services=(app nginx maintenance)
+    [[ "$dev" != 1 ]] || services+=(web)
+    compose up -d --build --wait "${services[@]}"
+    if [[ "$mode" == docker ]]; then compose up -d ollama; fi
+    compose up -d --force-recreate model-init
+    echo 'Quíbar iniciado. Modelo en preparación: ./quibar logs model-init'
+    if [[ "$dev" == 1 ]]; then echo 'Interfaz: http://127.0.0.1:3000'; else echo 'Interfaz: http://127.0.0.1:8000 (o QUIBAR_PORT configurado)'; fi
+    if [[ -t 0 ]]; then compose exec app python -m backend.cli setup-admin
+    else echo 'Crea el primer administrador con ./quibar admin'; fi ;;
+  detener) compose stop ;;
+  logs) compose logs --tail 100 -f "$@" ;;
+  admin)
+    if [[ $# == 0 ]]; then compose exec app python -m backend.cli setup-admin
+    else compose exec app python -m backend.cli "$@"; fi ;;
+  probar)
+    compose build app
+    compose run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container -v
+    docker build --target frontend -t "$project-frontend-tests" .
+    docker run --rm "$project-frontend-tests" npm test ;;
+  respaldo)
+    mkdir -p backups
+    destination="${1:-backups/$(date -u +%Y%m%dT%H%M%SZ).tar.gz}"
+    [[ ! -e "$destination" ]] || { echo 'El destino ya existe' >&2; exit 1; }
+    running=$(compose ps --status running --services app maintenance)
+    restore() { if [[ -n "$running" ]]; then while IFS= read -r service; do compose start "$service"; done <<< "$running"; fi; }
+    trap 'restore; cleanup' EXIT
+    compose stop app maintenance
+    # noclobber prevents an accidental overwrite; partial archives are reported.
+    (set -o noclobber; compose run --rm -T --no-deps tools python -m backend.container_ops backup > "$destination")
+    echo "Respaldo: $destination (guarda también $config por separado)" ;;
+  importar-mapa)
+    [[ $# -ge 1 && -f "$1" ]] || { echo 'Indica un archivo MBTiles existente' >&2; exit 1; }
+    map_path="$(cd -- "$(dirname -- "$1")" && pwd -P)/$(basename -- "$1")"
+    shift
+    compose run --rm --no-deps -v "$map_path:/import/map.mbtiles:ro" tools python -m backend.cli import-map /import/map.mbtiles "$@" ;;
+  importar-datos)
+    [[ $# == 1 && -d "$1" ]] || { echo 'Indica la carpeta de datos nativa, con los servicios nativos detenidos.' >&2; exit 1; }
+    stopped
+    source_dir="$(cd -- "$1" && pwd -P)"
+    compose build app
+    compose run --rm --no-deps --user 0:0 -v "$source_dir:/import:ro" tools python -m backend.container_ops import /import ;;
+esac

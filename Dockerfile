@@ -7,6 +7,7 @@ COPY app app
 COPY components components
 COPY lib lib
 COPY public public
+COPY vendor vendor
 RUN npm run build
 
 FROM python:3.12-slim-bookworm AS runtime

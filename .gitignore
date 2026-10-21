@@ -11,3 +11,5 @@ backend/media/
 dist/
 .next/
 *.tsbuildinfo
+.quibar/
+backups/

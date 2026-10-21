@@ -1,0 +1,7 @@
+# Linux: a bridge gateway cannot reach a service listening on host loopback.
+# Only the API/model client uses host networking; API ingress remains a Unix socket.
+services:
+  app:
+    network_mode: host
+  model-init:
+    network_mode: host

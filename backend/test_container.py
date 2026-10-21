@@ -70,3 +70,21 @@ class ContainerData(unittest.TestCase):
         with self.assertRaises(sqlite3.DatabaseError):
             container_ops.import_data(self.source)
         self.assertEqual(list(self.state.iterdir()), [])
+
+    def test_first_admin_setup_is_interactive_and_idempotent(self):
+        from .cli import main
+        with patch('sys.argv', ['quibar', 'setup-admin']), \
+                patch('builtins.input', side_effect=['first@example.test', 'First administrator']), \
+                patch('getpass.getpass', return_value='a-long-test-password'):
+            main()
+        with patch('sys.argv', ['quibar', 'setup-admin']), patch('builtins.input') as prompt:
+            main()
+            prompt.assert_not_called()
+
+    def test_remote_model_is_never_downloaded(self):
+        with patch.dict(os.environ, {'QUIBAR_OLLAMA_MODE': 'remote', 'QUIBAR_MODEL_PULL': '1', 'OLLAMA_URL': 'http://private-server:11434'}), \
+                patch('backend.container_ops.httpx.Client') as client, \
+                patch('backend.preload.main', return_value=0), self.assertRaises(SystemExit) as result:
+            container_ops.model()
+        self.assertEqual(result.exception.code, 0)
+        client.return_value.__enter__.return_value.stream.assert_not_called()
