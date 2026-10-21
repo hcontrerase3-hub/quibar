@@ -102,9 +102,14 @@ class BusinessData(BaseModel):
     tax_id: str = Field(default="", max_length=12)
     featured: bool = False
     demo: bool = True
+    sector: Literal["", "Santa Bárbara", "Huequecura", "Ralco"] = ""
+    location_source: str = Field(default="", max_length=1000)
+    location_verified: bool = False
 
     @model_validator(mode="after")
     def complete(self):
+        if self.location_verified and (not self.sector or len(self.location_source) < 5 or self.latitude is None):
+            raise ValueError("Verifica coordenadas, sector y fuente antes de publicar en el mapa")
         if (self.latitude is None) != (self.longitude is None):
             raise ValueError("Completa ambas coordenadas")
         if any(not value.strip() or len(value) > 150 for value in self.offerings):

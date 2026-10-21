@@ -67,6 +67,7 @@ def serialize(row: Comercio, private=False) -> dict:
         "keywords": row.keywords, "visual": row.visual, "status": row.estado_moderacion,
         "demo": row.demo, "latitude": row.latitud, "longitude": row.longitud,
         "whatsapp": row.telefono_whatsapp, "featured": row.destacado,
+        "sector": row.sector, "location_source": row.location_source, "location_verified": row.location_verified,
         "photos": [{"id": f.id, "url": f"/media/{f.ruta_archivo}", "alt": f.texto_alt,
                     "cover": f.es_portada, "order": f.orden} for f in row.fotos],
     }

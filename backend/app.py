@@ -201,6 +201,8 @@ from .admin import router as admin_router
 from .public import router as public_router
 app.include_router(admin_router)
 app.include_router(public_router)
+from .territory import router as territory_router
+app.include_router(territory_router)
 
 # The SPA fallback must be registered after all API routes.
 from .web import router as web_router

@@ -1,3 +1,4 @@
+import TerritoryAdmin, { sectors } from "./territory-admin";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import "./admin.css";
@@ -5,7 +6,7 @@ import "./admin.css";
 type Session = { id: number; name: string; email: string; role: string; csrf: string };
 type Photo = { id: number; url: string; alt: string; cover: boolean; order: number };
 type Business = {
-  id?: string; name: string; category: string; commune: string; area: string; summary: string;
+  sector?: string; location_source?: string; location_verified?: boolean; id?: string; name: string; category: string; commune: string; area: string; summary: string;
   description: string; offerings: string[]; hours: string; keywords: string; visual: string;
   status: "Pendiente" | "Aprobado" | "Suspendido"; latitude: number | null; longitude: number | null;
   whatsapp: string; legal_name: string; tax_id: string; featured: boolean; demo: boolean; photos: Photo[];
@@ -13,7 +14,7 @@ type Business = {
 type User = { id?: number; name: string; email: string; role: string; active: boolean; password?: string };
 type Audit = { id: number; user_id: number; action: string; at: string; detail: object };
 type Metric = { event: string; count: number; average_ms: number | null };
-const blank: Business = { name: "", category: "Gastronomía", commune: "Quilaco", area: "", summary: "", description: "",
+const blank: Business = { name: "", category: "Gastronomía", commune: "Santa Bárbara", sector: "Santa Bárbara", location_source: "", location_verified: false, area: "", summary: "", description: "",
   offerings: [""], hours: "", keywords: "", visual: "shop", status: "Pendiente", latitude: null, longitude: null,
   whatsapp: "", legal_name: "", tax_id: "", featured: false, demo: false, photos: [] };
 const blankUser: User = { name: "", email: "", role: "Operador Territorial", active: true, password: "" };
@@ -29,7 +30,7 @@ export default function Admin() {
   const [tab, setTab] = useState("catalog");
   const [rows, setRows] = useState<Business[]>([]);
   const [draft, setDraft] = useState<Business | null>(null);
-  const [lookups, setLookups] = useState({ communes: ["Quilaco", "Santa Bárbara"], categories: ["Gastronomía", "Alojamiento", "Turismo", "Artesanía", "Comercio"] });
+  const [lookups, setLookups] = useState({ communes: ["Santa Bárbara", "Alto Biobío", "Quilaco"], categories: ["Gastronomía", "Alojamiento", "Turismo", "Artesanía", "Comercio"] });
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("Todos");
   const [logs, setLogs] = useState<Audit[]>([]);
@@ -110,8 +111,9 @@ export default function Admin() {
 
   return <main className="admin-shell">
     <header className="admin-header"><a href="/" className="admin-logo">quibar.</a><span>Administración del catálogo</span><div><strong>{user.name}</strong><small>{user.role}</small></div><button disabled={busy} onClick={() => run(async () => { await api("/session", { method: "DELETE" }); setUser(null); setDraft(null); setRows([]); })}>Cerrar sesión</button></header>
-    <nav className="admin-tabs" aria-label="Administración">{[["catalog", "Catálogo"], ["metrics", "Uso del tótem"], ...(user.role === "Administrador" ? [["audit", "Auditoría"], ["users", "Usuarios"]] : [])].map(([key, label]) => <button key={key} aria-current={tab === key ? "page" : undefined} onClick={() => selectTab(key)}>{label}</button>)}</nav>
+    <nav className="admin-tabs" aria-label="Administración">{[["catalog", "Catálogo"], ["territory", "Atractivos y tótem"], ["metrics", "Uso del tótem"], ...(user.role === "Administrador" ? [["audit", "Auditoría"], ["users", "Usuarios"]] : [])].map(([key, label]) => <button key={key} aria-current={tab === key ? "page" : undefined} onClick={() => selectTab(key)}>{label}</button>)}</nav>
     {error && <p className="admin-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
+    {tab === "territory" && <TerritoryAdmin api={api} administrator={user.role === "Administrador"} communes={lookups.communes} />}
     {tab === "catalog" && <div className="admin-workspace"><aside className="admin-list"><div className="admin-list-heading"><h1>Fichas comerciales</h1><button disabled={busy} onClick={() => { setDraft({ ...blank, offerings: [""], photos: [] }); setNotice(""); }}>+ Nueva ficha</button></div>
       <label className="sr-only" htmlFor="admin-search">Buscar fichas</label><input id="admin-search" placeholder="Buscar por nombre o comuna" value={search} onChange={e => setSearch(e.target.value)} />
       <label className="sr-only" htmlFor="admin-filter">Estado de moderación</label><select id="admin-filter" value={filter} onChange={e => setFilter(e.target.value)}>{["Todos", "Pendiente", "Aprobado", "Suspendido"].map(s => <option key={s}>{s}</option>)}</select>
@@ -121,6 +123,9 @@ export default function Admin() {
       <fieldset disabled={busy}><legend>Información pública</legend><div className="admin-fields">
         <label className="wide">Nombre comercial<input required minLength={2} maxLength={150} value={draft.name} onChange={e => edit("name", e.target.value)} /></label>
         <label>Comuna<select value={draft.commune} onChange={e => edit("commune", e.target.value)}>{lookups.communes.map(v => <option key={v}>{v}</option>)}</select></label>
+        <label>Sector del circuito<select value={draft.sector ?? ""} onChange={e => edit("sector", e.target.value)}><option value="">Fuera del circuito / por revisar</option>{sectors.map(s => <option key={s}>{s}</option>)}</select></label>
+        <label>Fuente de ubicación<input maxLength={1000} value={draft.location_source ?? ""} onChange={e => edit("location_source", e.target.value)} /></label>
+        <label><span><input type="checkbox" checked={draft.location_verified ?? false} onChange={e => edit("location_verified", e.target.checked)} /> Ubicación verificada para el mapa</span></label>
         <label>Rubro<select value={draft.category} onChange={e => edit("category", e.target.value)}>{lookups.categories.map(v => <option key={v}>{v}</option>)}</select></label>
         <label className="wide">Resumen<input required minLength={5} maxLength={400} value={draft.summary} onChange={e => edit("summary", e.target.value)} /></label>
         <label className="wide">Descripción<textarea required minLength={5} maxLength={4000} rows={4} value={draft.description} onChange={e => edit("description", e.target.value)} /></label>

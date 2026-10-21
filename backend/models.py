@@ -50,6 +50,9 @@ class Comercio(Base):
     estado_moderacion: Mapped[str] = mapped_column(default="Pendiente", index=True)
     destacado: Mapped[bool] = mapped_column(Boolean, default=False)
     demo: Mapped[bool] = mapped_column(Boolean, default=False)
+    sector: Mapped[str] = mapped_column(String(50), default="")
+    location_source: Mapped[str] = mapped_column(Text, default="")
+    location_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     ofertas: Mapped[list] = mapped_column(JSON, default=list)
     keywords: Mapped[str] = mapped_column(Text, default="")
     visual: Mapped[str] = mapped_column(default="shop")
@@ -58,6 +61,34 @@ class Comercio(Base):
     comuna: Mapped[Comuna] = relationship(lazy="joined")
     rubro: Mapped[Rubro] = relationship(lazy="joined")
     fotos: Mapped[list["Fotografia"]] = relationship(cascade="all, delete-orphan", order_by="Fotografia.orden", lazy="selectin")
+
+
+class PuntoInteres(Base):
+    __tablename__ = "punto_interes"
+    __table_args__ = (CheckConstraint("status IN ('Pendiente','Aprobado','Suspendido')"),)
+    id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    name: Mapped[str] = mapped_column(String(150))
+    category: Mapped[str] = mapped_column(String(50))
+    commune: Mapped[str] = mapped_column(String(50))
+    sector: Mapped[str] = mapped_column(String(50))
+    description: Mapped[str] = mapped_column(Text)
+    latitude: Mapped[float] = mapped_column(Float)
+    longitude: Mapped[float] = mapped_column(Float)
+    access: Mapped[str] = mapped_column(Text)
+    hours: Mapped[str] = mapped_column(String(255), default="")
+    source: Mapped[str] = mapped_column(Text)
+    access_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    status: Mapped[str] = mapped_column(String(20), default="Pendiente")
+
+
+class Totem(Base):
+    __tablename__ = "totem"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(150), default="Tótem Quíbar")
+    latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(Text, default="")
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Fotografia(Base):
