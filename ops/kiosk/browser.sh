@@ -8,6 +8,7 @@ done
 profile="$HOME/.local/share/quibar-browser"
 if [[ -d /snap/chromium/current ]]; then profile="$HOME/snap/chromium/common/quibar-browser"; fi
 mkdir -p "$profile"
+until curl --fail --silent http://127.0.0.1:8000/api/quibar/health >/dev/null; do sleep 2; done
 exec "$browser" --kiosk --no-first-run --no-default-browser-check --incognito \
   --overscroll-history-navigation=0 --disable-session-crashed-bubble \
   --user-data-dir="$profile" http://127.0.0.1:8000/

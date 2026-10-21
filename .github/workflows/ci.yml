@@ -22,5 +22,17 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: pip install -r backend/requirements.lock
-      - run: python -m unittest backend.test_quibar backend.test_stack -v
-      - run: bash -n iniciar-quibar.command ops/install.sh ops/manage.sh ops/kiosk/browser.sh ops/kiosk/autostart
+      - run: python -m unittest backend.test_quibar backend.test_stack backend.test_container -v
+      - run: bash -n quibar ops/docker/acceptance.sh iniciar-quibar.command ops/install.sh ops/install-native.sh ops/manage.sh ops/kiosk/browser.sh ops/kiosk/autostart
+      - run: ops/install.sh . --kiosk --dry-run
+      - run: python -m unittest discover -s ops/docker -p 'test_*.py' -v
+  containers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: ops/docker/acceptance.sh
+      - shell: pwsh
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile("$PWD/ops/docker/quibar.ps1", [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { throw ($errors | Out-String) }

@@ -14,11 +14,12 @@ Actualización de implementación del 20 de octubre de 2026. El stack selecciona
 | QR | Códigos separados de ruta y WhatsApp | Prueba DOM; escaneo físico pendiente |
 | Ollama y Qwen 3 | Integración REST, precarga, contexto aprobado y modo básico | Protocolo simulado y validación; rendimiento real pendiente |
 | Auditoría y métricas | Registro de cambios de solo anexado y uso anónimo | Pruebas de auditoría y estadísticas |
-| Ubuntu, Openbox, Chromium y systemd | Instalador y servicios configurables | Sintaxis y simulación de instalación; validación en mini PC pendiente |
+| Docker Compose y Nginx | Imagen multietapa, API sin puerto TCP, datos persistentes, desarrollo con recarga y lanzadores Windows/macOS/Linux | Aceptación en Linux; ejecución real Windows/macOS pendiente |
+| Ubuntu, Openbox, Chromium y systemd | Instalador Docker y navegador en el anfitrión | Sintaxis y simulación de instalación; validación en mini PC pendiente |
 | Tailscale/WireGuard | Administración privada con Serve y ACL documentadas | Activación con cuenta autorizada pendiente |
 | Git y GitHub Actions | Commits por fase y workflow de backend, frontend y compilación | Ejecución local aprobada; ejecución remota depende de publicar el repositorio |
 
-Verificación local final: 21 pruebas de backend y 5 de interfaz aprobadas, compilación TypeScript/Vite, sintaxis de los scripts y simulación del instalador correctas. Una instancia con datos temporales también entregó la SPA y la API por HTTP, autenticó una sesión y respondió en modo básico al no disponer de Ollama. `npm audit` no reportó vulnerabilidades después de actualizar la dependencia transitiva afectada.
+Verificación local final: 26 pruebas de backend y 5 de interfaz aprobadas, más 4 pruebas del lanzador, compilación TypeScript/Vite, sintaxis de los scripts y simulación del instalador correctas. Una instancia con datos temporales también entregó la SPA y la API por HTTP, autenticó una sesión y respondió en modo básico al no disponer de Ollama. `npm audit` no reportó vulnerabilidades después de actualizar la dependencia transitiva afectada.
 
 Se añadió un anexo de implementación con respaldo previo a las fuentes Markdown de los informes 2.2 y 2.3 y a la planificación local de la Guía 2.1. Los DOCX/PDF se conservan como versiones de diseño. El tablero externo de Planner no se modificó.
 
@@ -46,3 +47,11 @@ Sin conexión a Microsoft Planner desde esta sesión, estos estados se dejan lis
 | Medir latencia de Qwen 3 y recuperación del tótem | Pendiente de hardware final |
 
 Las guías docentes PDF se mantienen como requisitos. Este anexo describe evidencia de implementación y debe acompañar las versiones académicas de los informes 2.2 y 2.3 para distinguir diseño, código y resultados medidos.
+
+## Empaquetado Docker y entorno de desarrollo
+
+Docker conserva React/Vite, FastAPI, SQLAlchemy/Alembic y SQLite WAL/FTS5. Node compila dentro de la imagen; Python 3.12 ejecuta la API sin privilegios. Nginx accede mediante socket Unix y publica solo loopback. Los datos y modelos usan volúmenes separados de las fuentes, con entornos independientes para desarrollo y producción. Los respaldos completos pausan escritores; la importación nativa verifica un destino vacío y conserva una copia previa a migrar.
+
+La inferencia remota es una alternativa de producción para el datacenter del cliente cuando el tótem no tiene capacidad para el modelo. La IA admite tres modos: Ollama en Docker por CPU, Ollama en el anfitrión y un servidor privado remoto por Tailscale. La configuración actual usa un servidor remoto con `gemma4:e2b` ya instalado, sin descarga automática; esta elección no sustituye la validación pendiente de Qwen 3 de 14B en el mini PC ni demuestra funcionamiento de IA sin red cuando se usa un servidor remoto. Si la IA no responde, el modo básico permanece disponible.
+
+La aceptación Docker verifica HTTP real, cookie HTTPS y CSRF, moderación, fallback, importación con permisos del usuario de aplicación, persistencia tras recreación y recarga Python/Vite. La descarga del modelo de 14B, la aceleración GPU, el kiosco físico y la ejecución en Windows/macOS requieren sus entornos correspondientes. Ver `docs/docker.md` y `docs/deployment.md`.

@@ -1,45 +1,51 @@
 # Instalación del tótem Quíbar en Ubuntu
 
-La instalación objetivo usa Ubuntu 24.04 LTS, FastAPI en `127.0.0.1:8000`, Chromium/Openbox y Ollama en `127.0.0.1:11434`. El equipo de desarrollo conserva su configuración; estos pasos se ejecutan en el mini PC destinado al tótem.
+El destino es Ubuntu 24.04 LTS con Docker/Compose, Nginx local, Chromium/Openbox y systemd. Python, Node y Ollama quedan dentro de contenedores; el servidor gráfico, navegador y controladores táctiles/gráficos se ejecutan en el anfitrión.
 
-## Preparar un release e instalar
+## Instalar el equipo dedicado
 
-En el equipo de desarrollo, ejecutar `npm ci && npm test && npm run build`. Transferir el proyecto con `dist/`, omitiendo `.git/`, `.env`, `.venv/`, `node_modules/` y los datos generados. No se necesita Node en el mini PC si la compilación está incluida.
-
-En Ubuntu instalar Python 3.12, `python3-venv`, `rsync`, `curl`, y Ollama desde su distribución oficial. Para el entorno gráfico se necesitan LightDM, Openbox, Chromium, `xserver-xorg`, `x11-xserver-utils` y `unclutter`. Seleccionar LightDM como gestor de sesión si existe otro. Confirmar que funcionan los controladores gráficos y táctiles antes de activar el kiosco.
+Transferir el repositorio completo, sin `.git/`, `.env`, `.quibar/`, `.venv/`, `node_modules/` ni datos generados. No hace falta compilar previamente `dist/`. El instalador prepara Docker desde paquetes Ubuntu si falta, habilita su servicio y construye la aplicación. Con `--kiosk` instala también los paquetes gráficos; confirmar LightDM y los controladores antes de la demostración.
 
 ```bash
-# Revisión sin cambios del instalador
-ops/install.sh /ruta/release --kiosk --dry-run
-# Instalar en el equipo destino
-sudo ops/install.sh /ruta/release --kiosk
-ollama pull qwen3:14b-q4_K_M
-sudo systemctl restart quibar-model.service
-sudo quibar-manage create-admin operador@example.com --name 'Administrador local'
+ops/install.sh /ruta/repository --kiosk --dry-run
+sudo ops/install.sh /ruta/repository --kiosk
+sudo /opt/quibar/quibar admin
+sudo /opt/quibar/quibar logs model-init
 ```
 
-El instalador crea `quibar` como usuario del servicio y `quibar-kiosk` como usuario gráfico sin privilegios administrativos. Conserva `/etc/quibar.env` si ya existe. El código queda en `/opt/quibar`; base, fotografías y mapa residen en `/var/lib/quibar`. No copia una base de desarrollo ni crea credenciales de demostración. La configuración del kiosco se aplica en el siguiente inicio de la sesión gráfica.
+El código queda en `/opt/quibar`, la configuración privada en `/opt/quibar/.quibar/production.env` y los datos en volúmenes Docker. La unidad `quibar-compose.service` inicia los servicios al arrancar; sus políticas de reinicio los recuperan tras fallos. El instalador conserva configuración y datos existentes. El modelo se descarga en segundo plano sin bloquear catálogo, QR ni modo básico. La cuenta `quibar-kiosk` abre el navegador sin acceso administrativo a Docker. Mantener el puerto 8000 para el navegador del kiosco.
 
-El equipo de 16 GB/512 GB descrito en la guía es un objetivo de hardware; la memoria utilizable, la velocidad del modelo de 14B y la temperatura se deben comprobar en ese equipo. Si Ollama no está preparado, el catálogo y los QR siguen funcionando y el chat usa modo básico.
+No ejecutar el instalador en el equipo de desarrollo como sustituto de `./quibar desarrollar`. Los cambios de LightDM, políticas y systemd se aplican únicamente al mini PC. La configuración de encendido tras corte eléctrico se realiza en BIOS/UEFI.
 
-## Supervisión y mantenimiento
+### Migración de una instalación nativa
+
+El instalador rechaza una API nativa activa. Antes de sustituirla, respaldar `/var/lib/quibar`, `/etc/quibar.env` y el release anterior. Detener y deshabilitar `quibar.service`, `quibar-model.service`, `quibar-prune.timer` y cualquier `quibar-prune.service` activo. Copiar el nuevo repositorio y ejecutar desde él `sudo ./quibar importar-datos /var/lib/quibar` **antes** del primer arranque Docker; los nombres de proyecto y volúmenes se conservarán al instalar en `/opt/quibar`. Seguir [la guía de importación](docker.md). No iniciar Docker con una semilla vacía antes de importar.
+
+Los antiguos archivos se mantienen para recuperación; `ops/install-native.sh` conserva el instalador nativo anterior como alternativa explícita. No mezclar ambos servicios en el puerto 8000.
+
+## Inferencia en el datacenter del cliente
+
+Si el tótem no puede alojar el modelo, configurar `/opt/quibar/.quibar/production.env` con `QUIBAR_OLLAMA_MODE=remote`, `OLLAMA_URL` apuntando al servidor privado y `QUIBAR_MODEL` con un modelo instalado. Reiniciar con `sudo /opt/quibar/quibar iniciar`. Esta opción mantiene la IA habilitada y no arranca Ollama en el tótem ni solicita descargas al servidor. El datacenter puede alojar Qwen 3 u otro modelo compatible configurado por el cliente.
+
+El anfitrión debe alcanzar ese servidor por Tailscale o la red privada del cliente; comprobar `quibar logs model-init`. Si la conexión falla, se entrega el catálogo mediante el modo básico y las siguientes consultas vuelven a intentar la IA. Validar latencia, capacidad y conectividad de la instalación final; la inferencia remota requiere esa red, aunque catálogo, mapas y QR sigan siendo locales.
+
+## Supervisión y actualización
 
 ```bash
-sudo systemctl status quibar quibar-model quibar-prune.timer
-sudo journalctl -u quibar -u quibar-model --since today
-curl -fsS http://127.0.0.1:8000/api/quibar/health
-sudo quibar-manage migrate
-sudo quibar-manage reset-password operador@example.com
-sudo quibar-manage import-map /var/tmp/territorio.mbtiles
+sudo systemctl status quibar-compose docker
+sudo /opt/quibar/quibar logs
+sudo /opt/quibar/quibar respaldo
+sudo /opt/quibar/quibar admin reset-password operador@example.com
+sudo /opt/quibar/quibar importar-mapa /var/tmp/territorio.mbtiles
 ```
 
-`quibar.service` reinicia la API tras fallos. `quibar-model.service` precarga el modelo cuando está instalado. El temporizador diario elimina métricas de más de 90 días y sesiones vencidas. Los servicios se ejecutan sin permisos para modificar el código; solo la API y la limpieza escriben en `/var/lib/quibar`.
+Antes de actualizar, respaldar y detener con `quibar detener`. Ejecutar nuevamente el instalador desde el release nuevo y reiniciar `quibar-compose.service` si ya estaba activo. Las migraciones se ejecutan al iniciar la API. Los cambios de código no eliminan los volúmenes. Revertir migraciones exige el respaldo y su versión de código correspondiente.
 
-El instalador de actualizaciones mantiene los datos y la configuración. Antes de actualizar, guardar un respaldo y detener la API mientras se reemplaza el release. Ejecutar otra vez el instalador, reiniciar `quibar.service` y comprobar la salud. Las migraciones iniciales preservan el catálogo anterior; la reversión completa se hace restaurando un respaldo previo y su versión de código.
+El hardware de 16 GB/512 GB de la guía es un objetivo: validar RAM utilizable, temperatura y latencia del modelo de 14B en el equipo real. No se declara cumplimiento de respuesta inferior a cinco segundos sin esa medición.
 
 ## Cartografía local
 
-Preparar un MBTiles raster de Quilaco y Santa Bárbara con atribución y licencia de uso local, y copiarlo a una ruta legible por el usuario `quibar`, como `/var/tmp/territorio.mbtiles`. Importarlo con `quibar-manage import-map`; para una actualización usar `--replace`. El archivo se valida y cambia de forma atómica, sin reiniciar la API.
+Preparar un MBTiles raster de Quilaco y Santa Bárbara con atribución y licencia de uso local, y copiarlo a una ruta legible por el usuario `quibar`, como `/var/tmp/territorio.mbtiles`. Importarlo con `sudo /opt/quibar/quibar importar-mapa`; para una actualización usar `--replace`. El archivo se valida y cambia de forma atómica, sin reiniciar la API.
 
 La aplicación no incluye un paquete cartográfico de terceros ni coordenadas o teléfonos ficticios añadidos a las fichas originales. Validar la cobertura de la zona y los niveles de zoom con fichas reales antes de la presentación. El endpoint `/api/quibar/map` informa si hay un paquete disponible. Los QR de ruta y de contacto se producen localmente y apuntan directamente al servicio correspondiente del teléfono.
 
@@ -57,9 +63,7 @@ La activación requiere una cuenta autorizada y DNS/certificados habilitados en 
 
 ## Respaldo y recuperación
 
-`quibar-manage backup /var/lib/quibar/backups/FECHA.sqlite3` usa la API de respaldo de SQLite, incluyendo transacciones confirmadas en WAL. Esa operación respalda la base; para una copia completa, incluir también `media/`, el mapa y `/etc/quibar.env`.
-
-Para hacer una copia coherente de base y medios, detener `quibar.service`, `quibar-prune.timer` y cualquier ejecución de `quibar-prune.service`, realizar el respaldo y copiar los medios, y volver a iniciar el servicio y el temporizador. Conservar los archivos con acceso restringido: contienen usuarios, auditoría y antecedentes privados de comercios. Restaurar con los servicios detenidos y conservar propietario `quibar:quibar` y permisos de lectura/escritura solo para ese usuario.
+Ejecutar `sudo /opt/quibar/quibar respaldo` y seguir [la recuperación e importación de datos](docker.md). El archivo incluye base, fotos y mapa, con API y limpieza pausadas; conservar también `.quibar/production.env` y la versión del código. No eliminar volúmenes al actualizar.
 
 ## Pruebas de campo requeridas
 

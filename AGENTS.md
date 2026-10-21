@@ -2,28 +2,29 @@
 
 ## Project Structure & Module Organization
 
-The touchscreen React SPA is in `app/`, with shared primitives in `components/ui/` and helpers in `lib/`. Vite compiles it into `dist/`; FastAPI serves that build in production. Backend modules live in `backend/`: `app.py` handles chat, `admin.py` manages protected catalog operations, `security.py` handles sessions, and `db.py` provides SQLAlchemy access. Alembic revisions are in `backend/migrations/`. `data/catalog.json` seeds the fictional demo records; `public/` contains static assets. Deployment scripts and systemd units are in `ops/`; operational documentation is in `docs/`.
+The React/Vite touchscreen SPA is in `app/`; reusable primitives are in `components/ui/` and helpers in `lib/`. FastAPI serves the compiled `dist/` in production. Backend modules cover public APIs, administration, sessions, maps, and SQLAlchemy access. Alembic revisions live in `backend/migrations/`. `data/catalog.json` seeds fictional demo records; `public/` contains assets. Docker configuration lives in `compose*.yaml`, `Dockerfile`, and `ops/docker/`. Ubuntu kiosk scripts and systemd units are in `ops/`; operational guides are in `docs/`.
 
 ## Build, Test, and Development Commands
 
-- `npm ci` installs locked frontend dependencies; `npm run dev` starts Vite at `127.0.0.1:3000` with API, media, and tile proxies.
-- `npm run build` checks TypeScript and creates the SPA; `npm start` serves it through FastAPI at the configured local address.
-- `.venv/bin/python -m pip install -r backend/requirements.lock` installs the verified Python environment.
-- `.venv/bin/python -m backend.run` starts the API; `backend.cli migrate` applies migrations and `backend.cli create-admin EMAIL --name NAME` provisions the first administrator.
-- `npm test` runs Vitest interaction tests. `.venv/bin/python -m unittest backend.test_quibar backend.test_stack -v` runs backend acceptance tests.
+- `./quibar iniciar` builds and starts production at `127.0.0.1:8000`; `./quibar desarrollar` starts Vite with reload at port 3000 and a separate API/data environment.
+- `./quibar detener` stops services while preserving volumes. Prefix actions with `--dev` to select development.
+- `./quibar admin` creates the first administrator interactively. `./quibar respaldo` backs up database, media, and map with writers paused.
+- `./quibar probar` runs backend and frontend suites inside containers. `ops/docker/acceptance.sh` checks HTTP and persistence using disposable volumes.
+- On Windows, replace `./quibar` with `quibar.cmd`. Docker is the only application runtime prerequisite.
+- Native alternative: `npm ci`, `npm run dev`, `npm run build`, and `.venv/bin/python -m backend.run`; install Python dependencies from `backend/requirements.lock`.
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript, two-space indentation, PascalCase components, and camelCase functions. Reuse UI primitives and keep app styles in `app/`. Python uses four-space indentation and snake_case; relational entity names follow the Spanish academic model, while public API fields retain their established English names. No formatter or lint script is configured; follow surrounding patterns.
+Use strict TypeScript, two-space indentation, PascalCase components, and camelCase functions. Python uses four-space indentation and snake_case; domain entities follow the Spanish academic model while public API fields remain English. Reuse UI primitives and surrounding patterns; no formatter/linter script is configured.
 
 ## Testing Guidelines
 
-Use temporary databases and simulated model transports. Cover approval filtering, migrations, roles, sessions, media, and conversation follow-ups when changing those behaviors. Tests use `test_*.py` and `*.test.tsx`. Run affected suites and the production build for frontend changes. Physical touch, QR scanning, kiosk recovery, and model latency need validation on the target hardware.
+Tests use unittest (`backend.test_quibar`, `backend.test_stack`, `backend.test_container`) and Vitest (`*.test.tsx`). Use temporary databases and simulated model transports. Cover approval, migrations, roles, CSRF, media, and retrieval when modifying those behaviors. Physical touch, QR scanning, recovery, and model latency require target hardware.
 
 ## Commit & Pull Request Guidelines
 
-Use short, direct commit subjects in Spanish or English. Keep commits focused by functional phase. Pull requests should describe behavior changes, verification results, related issues, and screenshots for visible UI changes.
+Use short, direct Spanish or English subjects and focused commits per functional phase. Describe behavior, verification results, related issues, and screenshots for UI changes.
 
-## Security & Configuration Tips
+## Security & Data Preservation
 
-Only approved records from active categories may be public or retrieved by Quíbar. Administrative writes require authentication, network restrictions, and CSRF protection. Keep secrets in local `.env` files. Never commit generated databases, media uploads, MBTiles, environments, or credentials. Preserve existing data through migrations and backups; do not reset SQLite to update the catalog.
+Publish only approved records from active categories. Preserve authentication, CSRF, loopback ingress, and the private proxy socket. Never commit `.env`, `.quibar/`, generated databases, uploads, maps, backups, or credentials. Keep development and production volumes separate; never delete populated volumes to migrate data. Follow `docs/docker.md` for explicit imports and recovery.

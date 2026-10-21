@@ -1,10 +1,38 @@
 # Quíbar · Guía comercial local
 
-Tótem táctil para descubrir comercios de Quilaco y Santa Bárbara. El catálogo, el panel administrativo, los mapas y el asistente funcionan en el mismo equipo. **Las ocho fichas incluidas son ficticias**; la mascota de Quíbar fue aportada por Hugo.
+Tótem táctil para descubrir comercios de Quilaco y Santa Bárbara. El catálogo, el panel administrativo y los mapas funcionan en el tótem; el asistente puede usar Ollama en el mismo equipo o en un servidor privado del cliente. **Las ocho fichas incluidas son ficticias**; la mascota de Quíbar fue aportada por Hugo.
 
-El stack sigue las guías 2.2 y 2.3: **React + Vite + TypeScript + Tailwind CSS**, FastAPI, SQLAlchemy/Alembic, SQLite WAL/FTS5, Leaflet, `qrcode.react` y Ollama/Qwen 3. En producción FastAPI entrega la SPA compilada; Node solo se necesita para desarrollo y compilación.
+El stack sigue las guías 2.2 y 2.3: **React + Vite + TypeScript + Tailwind CSS**, FastAPI, SQLAlchemy/Alembic, SQLite WAL/FTS5, Leaflet, `qrcode.react` y Ollama/Qwen 3. En producción FastAPI entrega la SPA compilada; Node se usa solo para desarrollo y compilación; Docker incluye estas herramientas.
 
-## Preparar el entorno
+## Iniciar con Docker (recomendado)
+
+Instala Docker Desktop en Windows/macOS o Docker Engine con Compose v2 en Linux. No necesitas instalar Node, Python ni Ollama en el equipo anfitrión.
+
+```bash
+./quibar iniciar       # macOS / Linux: http://127.0.0.1:8000
+./quibar desarrollar   # desarrollo con recarga: http://127.0.0.1:3000
+./quibar detener      # conserva todos los datos
+```
+
+En Windows usa `quibar.cmd iniciar`, `quibar.cmd desarrollar` y `quibar.cmd detener` desde PowerShell o CMD, con Docker Desktop en modo de contenedores Linux. El primer arranque pide crear un administrador; también puedes hacerlo con `./quibar admin`. No hay usuarios ni contraseñas predeterminados.
+
+La configuración se crea en `.quibar/production.env` o `.quibar/development.env`, sin modificar `.env`. Ambos entornos tienen volúmenes separados; la API de desarrollo usa el puerto 8001. La descarga inicial de Qwen 3 puede tardar y requiere espacio para unos 9,3 GB de modelo, además de las imágenes. Mientras se prepara o si falla, el catálogo y el chat básico siguen disponibles. Sigue el progreso con `./quibar logs model-init`.
+
+| Acción | Comando (Windows: sustituir `./quibar` por `quibar.cmd`) |
+|---|---|
+| Pruebas backend e interfaz en contenedores | `./quibar probar` |
+| Registros | `./quibar logs` |
+| Crear primer administrador | `./quibar admin` |
+| Restablecer contraseña | `./quibar admin reset-password CORREO` |
+| Respaldo completo de base, fotos y mapa | `./quibar respaldo` |
+| Instalar mapa | `./quibar importar-mapa /ruta/mapa.mbtiles` |
+| Importar datos nativos en un volumen vacío | `./quibar importar-datos /ruta/datos` |
+
+Para administrar el entorno de desarrollo, antepone `--dev`: `./quibar --dev detener`, `./quibar --dev admin`, etc. `detener` nunca elimina volúmenes. Los respaldos se guardan en `backups/`, pausando temporalmente la API y la limpieza para mantener coherencia. Conserva la configuración por separado. La importación requiere detener previamente los servicios nativos y un destino vacío; no copia datos automáticamente al iniciar. Consulta [operación, migración y recuperación](docs/docker.md).
+
+El modo predeterminado ejecuta Ollama por CPU dentro de Docker. Para reutilizar Ollama instalado en el anfitrión, cambia `QUIBAR_OLLAMA_MODE=native` en la configuración correspondiente. Linux usa la red del anfitrión solo para el cliente de IA; macOS/Windows usan `host.docker.internal`. La API continúa entrando por el socket privado de Nginx. La aceleración GPU y el tiempo de respuesta deben medirse en el equipo final. También puedes configurar `QUIBAR_OLLAMA_MODE=remote`, `OLLAMA_URL=http://IP-TAILSCALE:11434` y un `QUIBAR_MODEL` ya instalado. Ese modo está disponible también para producción y para inferencia en el datacenter del cliente. Verifica y precarga el modelo sin descargarlo; requiere acceso al servidor por la red privada.
+
+## Preparar el entorno nativo (alternativa)
 
 Se recomienda Python 3.12 y Node.js 22.13 o posterior. Para IA local, instala Ollama y descarga el modelo acordado (aproximadamente 9,3 GB):
 
@@ -57,7 +85,7 @@ El importador verifica integridad y formato (PNG/JPEG/WebP), y sustituye el arch
 
 Las fichas con coordenadas muestran ubicación y QR de ruta. Un QR separado permite abrir WhatsApp cuando existe un contacto. La generación no necesita internet; la navegación y mensajería del teléfono dependen de sus aplicaciones, mapas descargados y conectividad. Si falta cartografía o coordenadas, la interfaz lo indica.
 
-## Asistente local
+## Asistente con Ollama
 
 FastAPI recupera como máximo tres fichas aprobadas mediante búsqueda normalizada y ranking FTS5. Envía su contenido a Ollama; valida IDs, nombres y datos numéricos de la respuesta. Si la consulta no tiene coincidencias, evita la generación abierta. Si el modelo falla o supera el plazo configurado, devuelve una respuesta básica con datos del catálogo.
 

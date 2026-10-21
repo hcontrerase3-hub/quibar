@@ -1,0 +1,15 @@
+[Unit]
+Description=Quibar Docker Compose
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/quibar
+ExecStart=/opt/quibar/quibar iniciar
+ExecStop=/opt/quibar/quibar detener
+TimeoutStartSec=0
+TimeoutStopSec=120
+[Install]
+WantedBy=multi-user.target
