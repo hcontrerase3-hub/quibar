@@ -51,6 +51,7 @@ class Turn(BaseModel):
 
 
 class ChatRequest(BaseModel):
+    scope: Literal["legacy", "circuit"] = "legacy"
     query: str = Field(min_length=1, max_length=250)
     context_ids: list[str] = Field(default_factory=list, max_length=3)
     history: list[Turn] = Field(default_factory=list, max_length=6)
@@ -173,6 +174,9 @@ def record_chat_metric(start):
 async def chat(request: ChatRequest) -> ChatResponse:
     start = time.monotonic()
     rows = approved()
+    if request.scope == "circuit":
+        from .territory import public_places
+        rows = [{**p, 'id': p['key'], 'keywords': p.get('keywords', '') + ' ' + p.get('sector', '') + (' turismo paseo naturaleza mirador cultura' if p['kind'] == 'interest' else ''), 'offerings': p.get('offerings', [])} for p in public_places()]
     greeting = is_greeting(request.query)
     candidates = [] if greeting else retrieve(request.query, rows, request.context_ids, text_ranking(request.query))
     if not candidates and not greeting:
@@ -203,6 +207,8 @@ app.include_router(admin_router)
 app.include_router(public_router)
 from .territory import router as territory_router
 app.include_router(territory_router)
+from .routes import router as routes_router
+app.include_router(routes_router)
 
 # The SPA fallback must be registered after all API routes.
 from .web import router as web_router

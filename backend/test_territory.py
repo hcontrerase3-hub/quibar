@@ -34,7 +34,7 @@ class TerritoryAcceptance(unittest.TestCase):
 
     def test_migration_preserves_catalog_without_inventing_coordinates(self):
         result = self.client.get('/api/quibar/places').json()
-        self.assertEqual(result['places'], [])
+        self.assertFalse(any(p['located'] for p in result['places']))
         self.assertFalse(result['station']['configured'])
         self.assertEqual(len(self.client.get('/api/quibar/catalog').json()), 8)
         self.assertIn('Alto Biobío', self.client.get('/api/quibar/admin/lookups').json()['communes'])
@@ -43,10 +43,10 @@ class TerritoryAcceptance(unittest.TestCase):
         self.assertEqual(self.client.post('/api/quibar/admin/interests', json=self.place).status_code, 403)
         result = self.client.post('/api/quibar/admin/interests', json=self.place, headers=self.headers)
         self.assertEqual(result.status_code, 201, result.text)
-        self.assertEqual(len(self.client.get('/api/quibar/places').json()['places']), 1)
+        self.assertEqual(sum(p['kind']=='interest' for p in self.client.get('/api/quibar/places').json()['places']), 1)
         data = result.json(); data['status'] = 'Suspendido'
         self.client.put('/api/quibar/admin/interests/'+data['id'], json=data, headers=self.headers).raise_for_status()
-        self.assertEqual(self.client.get('/api/quibar/places').json()['places'], [])
+        self.assertFalse(any(p['kind']=='interest' for p in self.client.get('/api/quibar/places').json()['places']))
         self.login('operator@test.local')
         self.assertEqual(self.client.post('/api/quibar/admin/interests', json=self.place, headers=self.headers).status_code, 403)
         pending = {**self.place, 'status': 'Pendiente'}
@@ -62,12 +62,12 @@ class TerritoryAcceptance(unittest.TestCase):
             row = db.scalar(select(Comercio).where(Comercio.comuna.has(nombre='Santa Bárbara')))
             row.sector='Huequecura'; row.latitud=-37.74; row.longitud=-71.89; row.demo=False
             db.commit()
-        place = self.client.get('/api/quibar/places').json()['places'][0]
+        place = next(p for p in self.client.get('/api/quibar/places').json()['places'] if p['sector']=='Huequecura')
         self.assertFalse(place['located']); self.assertIsNone(place['latitude'])
         with session() as db:
             row = db.scalar(select(Comercio).where(Comercio.sector=='Huequecura'))
             row.location_verified=True; row.location_source='Fixture sintético'; db.commit()
-        self.assertTrue(self.client.get('/api/quibar/places').json()['places'][0]['located'])
+        self.assertTrue(next(p for p in self.client.get('/api/quibar/places').json()['places'] if p['sector']=='Huequecura')['located'])
 
     def test_unverified_access_and_outside_area_cannot_be_approved(self):
         for changes in [{'access_verified': False}, {'latitude': 20}, {'sector':'Quilaco'}]:

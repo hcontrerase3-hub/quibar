@@ -28,6 +28,9 @@ def main():
     maps = sub.add_parser("import-map", help="Instalar un mapa MBTiles raster verificado")
     maps.add_argument("source", type=Path)
     maps.add_argument("--replace", action="store_true")
+    roads = sub.add_parser("import-roads", help="Preparar datos viales OSM PBF para Valhalla")
+    roads.add_argument("source", type=Path)
+    roads.add_argument("--replace", action="store_true")
     sub.add_parser("prune", help="Eliminar métricas de más de 90 días y sesiones vencidas")
     args = parser.parse_args()
     if args.command != "backup":
@@ -75,6 +78,12 @@ def main():
         from .maps import install_map
         try:
             print(install_map(args.source, args.replace))
+        except ValueError as error:
+            parser.error(str(error))
+    elif args.command == "import-roads":
+        from .roads import install_roads
+        try:
+            print(install_roads(args.source, args.replace))
         except ValueError as error:
             parser.error(str(error))
     elif args.command == "prune":

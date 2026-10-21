@@ -31,7 +31,7 @@ def interest_dict(row):
 def public_places():
     places = []
     for row in approved():
-        if row['commune'] == 'Quilaco' or row.get('sector') not in SECTORS:
+        if row['commune'] == 'Quilaco' or (row.get('sector') not in SECTORS and row['commune'] != 'Santa Bárbara'):
             continue
         located = bool(row.get('location_verified') and row.get('location_source') and
                        row['latitude'] is not None and row['longitude'] is not None and

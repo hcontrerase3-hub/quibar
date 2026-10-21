@@ -40,7 +40,7 @@ def backup(destination=None):
             Path(destination).chmod(0o600)
         with tarfile.open(fileobj=output, mode='w|gz') as archive:
             archive.add(target, arcname='quibar.sqlite3')
-            for name in ('media', 'map.mbtiles'):
+            for name in ('media', 'map.mbtiles', 'routing'):
                 if (STATE / name).exists():
                     archive.add(STATE / name, arcname=name)
         if destination:
@@ -69,10 +69,14 @@ def import_data(source):
             shutil.copytree(media, staging / 'media')
         if (source / 'map.mbtiles').exists():
             shutil.copyfile(source / 'map.mbtiles', staging / 'map.mbtiles')
+        if (source / 'routing').is_dir():
+            if any(p.is_symlink() for p in (source / 'routing').rglob('*')):
+                raise ValueError('No se admiten enlaces en datos viales')
+            shutil.copytree(source / 'routing', staging / 'routing')
         # The original snapshot remains available even if a later migration fails.
         shutil.copyfile(staging / 'quibar.sqlite3', staging / 'pre-migration.sqlite3')
         with tarfile.open(staging / 'pre-migration.tar.gz', 'w:gz') as archive:
-            for name in ('quibar.sqlite3', 'media', 'map.mbtiles'):
+            for name in ('quibar.sqlite3', 'media', 'map.mbtiles', 'routing'):
                 if (staging / name).exists():
                     archive.add(staging / name, arcname=name)
         (staging / 'pre-migration.tar.gz').chmod(0o600)
