@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-The React/Vite touchscreen SPA is in `app/`; reusable primitives are in `components/ui/` and helpers in `lib/`. FastAPI serves the compiled `dist/` in production. Backend modules cover public APIs, administration, sessions, maps, and SQLAlchemy access. Alembic revisions live in `backend/migrations/`. `data/catalog.json` seeds fictional demo records; `public/` contains assets. Docker configuration lives in `compose*.yaml`, `Dockerfile`, and `ops/docker/`. Ubuntu kiosk scripts and systemd units are in `ops/`; operational guides are in `docs/`.
+The map-first React/Vite kiosk for Santa Bárbara–Huequecura–Ralco is in `app/`; reusable primitives are in `components/ui/` and helpers in `lib/`. FastAPI serves the compiled `dist/` in production. Backend modules cover APIs, administration, sessions, geography, Valhalla routes and SQLAlchemy. Alembic revisions live in `backend/migrations/`. `data/catalog.json` seeds fictional demo records; `public/` contains assets. Piper speech and routing support are in `ops/speech/` and `ops/routing/`. Docker configuration lives in `compose*.yaml`, `Dockerfile`, and `ops/docker/`. Ubuntu kiosk scripts and systemd units are in `ops/`; operational guides are in `docs/`.
 
 ## Build, Test, and Development Commands
 
@@ -19,7 +19,7 @@ Use strict TypeScript, two-space indentation, PascalCase components, and camelCa
 
 ## Testing Guidelines
 
-Tests use unittest (`backend.test_quibar`, `backend.test_stack`, `backend.test_container`) and Vitest (`*.test.tsx`). Use temporary databases and simulated model transports. Cover approval, migrations, roles, CSRF, media, and retrieval when modifying those behaviors. Physical touch, QR scanning, recovery, and model latency require target hardware.
+Tests use unittest (`backend.test_quibar`, `backend.test_stack`, `backend.test_container`, `backend.test_territory`, `backend.test_routes`) and Vitest (`*.test.tsx`). Use temporary databases and simulated model transports. Cover approval, migrations, roles, CSRF, media, and retrieval when modifying those behaviors. Physical touch, QR scanning, recovery, and model latency require target hardware.
 
 ## Commit & Pull Request Guidelines
 
@@ -27,4 +27,4 @@ Use short, direct Spanish or English subjects and focused commits per functional
 
 ## Security & Data Preservation
 
-Publish only approved records from active categories. Preserve authentication, CSRF, loopback ingress, and the private proxy socket. Never commit `.env`, `.quibar/`, generated databases, uploads, maps, backups, or credentials. Keep development and production volumes separate; never delete populated volumes to migrate data. Follow `docs/docker.md` for explicit imports and recovery.
+Publish only approved records from active categories. Preserve authentication, CSRF, loopback ingress, and the private proxy socket. Never commit `.env`, `.quibar/`, generated databases, uploads, maps, backups, or credentials. Never invent coordinates or automatically add suggested stops. Keep development and production volumes separate; never delete populated volumes to migrate data. Follow `docs/docker.md` for explicit imports and recovery.

@@ -1,6 +1,6 @@
 # Quíbar · Guía comercial local
 
-Tótem táctil para descubrir comercios de Quilaco y Santa Bárbara. El catálogo, el panel administrativo y los mapas funcionan en el tótem; el asistente puede usar Ollama en el mismo equipo o en un servidor privado del cliente. **Las ocho fichas incluidas son ficticias**; la mascota de Quíbar fue aportada por Hugo.
+Tótem táctil para descubrir comercios y atractivos del circuito **Santa Bárbara–Huequecura–Ralco**. El catálogo, el panel administrativo y los mapas funcionan en el tótem; el asistente puede usar Ollama en el mismo equipo o en un servidor privado del cliente. **Las ocho fichas incluidas son ficticias**; la mascota de Quíbar fue aportada por Hugo.
 
 El stack sigue las guías 2.2 y 2.3: **React + Vite + TypeScript + Tailwind CSS**, FastAPI, SQLAlchemy/Alembic, SQLite WAL/FTS5, Leaflet, `qrcode.react` y Ollama/Qwen 3. En producción FastAPI entrega la SPA compilada; Node se usa solo para desarrollo y compilación; Docker incluye estas herramientas.
 
@@ -57,6 +57,20 @@ npm start
 Abre `http://127.0.0.1:8000/` para el tótem y `/admin` para administrar. La creación del usuario pide una contraseña de al menos 12 caracteres; no existen credenciales predeterminadas. `npm start` usa el host y puerto de API configurados en `.env`.
 
 Para desarrollar, inicia `.venv/bin/python -m backend.run` en una terminal y `npm run dev` en otra. Vite usa `127.0.0.1:3000` y envía `/api`, `/media` y `/tiles` a FastAPI. El iniciador `./iniciar-quibar.command` prepara la compilación, precarga Ollama y abre el tótem en macOS.
+
+## Mapa principal y recorridos
+
+La pantalla inicial es el mapa del circuito, con búsqueda, filtros por sector y una lista accesible. Selecciona un lugar y pulsa **Cómo llegar** para ver indicaciones desde el tótem, caminando o en vehículo. Quíbar sugiere hasta tres paradas con desvío vial comprobado; solo modifica la ruta cuando confirmas **Añadir parada**. El QR abre el recorrido en Google Maps y la voz se reproduce únicamente al pulsar **Escuchar a Quíbar**.
+
+La aplicación incluye Valhalla y Piper en Docker. Antes del uso real, configura la ubicación verificada del tótem, carga lugares aprobados e instala los paquetes geográficos:
+
+```bash
+./quibar importar-mapa /ruta/circuito.mbtiles
+./quibar preparar-rutas /ruta/region.osm.pbf
+./quibar logs routing
+```
+
+Las fichas ficticias existentes no reciben coordenadas inventadas. Si falta mapa, origen o grafo, la interfaz lo informa y mantiene la consulta de lugares. Consulta [preparación del circuito, voz y pruebas](docs/map-circuit.md).
 
 ## Catálogo y administración
 

@@ -70,3 +70,7 @@ Para un proyecto nuevo explícito, los operadores pueden usar Compose directamen
 `./quibar probar` ejecuta las suites de backend e interfaz dentro de imágenes Docker. `ops/docker/acceptance.sh` comprueba HTTP real, moderación, HTTPS/CSRF, fallback y persistencia tras recrear contenedores en un proyecto temporal, que elimina al terminar. No descarga el modelo de 14B ni utiliza datos reales. CI ejecuta esta aceptación y analiza la sintaxis PowerShell. La ejecución real en macOS/Windows y las pruebas físicas de GPU, táctil, QR y reinicio del kiosco requieren esos equipos.
 
 Las operaciones del lanzador se serializan mediante `.quibar/NOMBRE.lock`. Si un cierre forzado deja ese directorio, comprobar que no exista otra operación antes de retirarlo manualmente.
+
+## Mapa del circuito y servicios locales
+
+Consulta [Santa Bárbara–Huequecura–Ralco](map-circuit.md) para instalar mapas raster y datos viales, configurar el origen, moderar atractivos y operar Valhalla/Piper. `respaldo` incluye `routing/` con el motor detenido; el modelo de voz se mantiene en su propio volumen.

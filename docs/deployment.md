@@ -15,6 +15,8 @@ sudo /opt/quibar/quibar logs model-init
 
 El código queda en `/opt/quibar`, la configuración privada en `/opt/quibar/.quibar/production.env` y los datos en volúmenes Docker. La unidad `quibar-compose.service` inicia los servicios al arrancar; sus políticas de reinicio los recuperan tras fallos. El instalador conserva configuración y datos existentes. El modelo se descarga en segundo plano sin bloquear catálogo, QR ni modo básico. La cuenta `quibar-kiosk` abre el navegador sin acceso administrativo a Docker. Mantener el puerto 8000 para el navegador del kiosco.
 
+Para habilitar el mapa principal y recorridos del circuito, seguir [la preparación territorial](map-circuit.md): instalar MBTiles raster y extracción OSM PBF, configurar el origen del tótem y aprobar lugares con coordenadas verificadas. Valhalla y Piper se inician con el lanzador; sin esos datos la aplicación informa lo pendiente y mantiene la lista disponible.
+
 No ejecutar el instalador en el equipo de desarrollo como sustituto de `./quibar desarrollar`. Los cambios de LightDM, políticas y systemd se aplican únicamente al mini PC. La configuración de encendido tras corte eléctrico se realiza en BIOS/UEFI.
 
 ### Migración de una instalación nativa

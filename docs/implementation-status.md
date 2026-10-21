@@ -55,3 +55,11 @@ Docker conserva React/Vite, FastAPI, SQLAlchemy/Alembic y SQLite WAL/FTS5. Node 
 La inferencia remota es una alternativa de producción para el datacenter del cliente cuando el tótem no tiene capacidad para el modelo. La IA admite tres modos: Ollama en Docker por CPU, Ollama en el anfitrión y un servidor privado remoto por Tailscale. La configuración actual usa un servidor remoto con `gemma4:e2b` ya instalado, sin descarga automática; esta elección no sustituye la validación pendiente de Qwen 3 de 14B en el mini PC ni demuestra funcionamiento de IA sin red cuando se usa un servidor remoto. Si la IA no responde, el modo básico permanece disponible.
 
 La aceptación Docker verifica HTTP real, cookie HTTPS y CSRF, moderación, fallback, importación con permisos del usuario de aplicación, persistencia tras recreación y recarga Python/Vite. La descarga del modelo de 14B, la aceleración GPU, el kiosco físico y la ejecución en Windows/macOS requieren sus entornos correspondientes. Ver `docs/docker.md` y `docs/deployment.md`.
+
+## Mapa principal del circuito Santa Bárbara–Huequecura–Ralco
+
+Se incorporan sectores turísticos independientes de la comuna, Alto Biobío, atractivos moderados, origen verificado del tótem, rutas Valhalla peatonales y vehiculares, sugerencias con desvío vial, paradas confirmadas, QR con itinerario y voz Piper local. La inferencia Ollama remota sigue disponible para el datacenter del cliente. Las fichas anteriores se conservan y no reciben coordenadas inventadas.
+
+La aceptación distingue datos sintéticos de datos territoriales: pruebas unitarias y HTTP usan bases temporales; el grafo de aceptación real de Valhalla es una cuadrícula explícitamente sintética. Antes de demostrar recorridos reales se deben instalar MBTiles y OSM PBF de la zona, verificar ubicaciones y accesos y medir el hardware. Ver `docs/map-circuit.md`.
+
+Validación de esta fase: 39 pruebas backend, 7 de interfaz y 4 del lanzador aprobadas; compilación TypeScript/Vite y revisión visual en escritorio y móvil completadas. La aceptación Docker aprobó persistencia, respaldo, importación y recarga. La aceptación geográfica usó Valhalla y Piper reales: ambos perfiles, paradas confirmadas, revocación y audio WAV servido por el proxy. Estos resultados no verifican la precisión de datos territoriales todavía no instalados.
