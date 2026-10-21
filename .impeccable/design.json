@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-21T03:36:02.793057+00:00",
+  "title": "Design System: Quíbar",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Verde global",
+        "tonalRamp": [
+          "oklch(15% 0.0771 188.80)",
+          "oklch(26% 0.0771 188.80)",
+          "oklch(38% 0.0771 188.80)",
+          "oklch(49% 0.0771 188.80)",
+          "oklch(61% 0.0771 188.80)",
+          "oklch(72% 0.0771 188.80)",
+          "oklch(84% 0.0771 188.80)",
+          "oklch(95% 0.0771 188.80)"
+        ]
+      },
+      "map-action": {
+        "role": "primary",
+        "displayName": "Verde de acción del mapa",
+        "tonalRamp": [
+          "oklch(15% 0.0805 179.99)",
+          "oklch(26% 0.0805 179.99)",
+          "oklch(38% 0.0805 179.99)",
+          "oklch(49% 0.0805 179.99)",
+          "oklch(61% 0.0805 179.99)",
+          "oklch(72% 0.0805 179.99)",
+          "oklch(84% 0.0805 179.99)",
+          "oklch(95% 0.0805 179.99)"
+        ]
+      },
+      "map-deep": {
+        "role": "primary",
+        "displayName": "Verde profundo",
+        "tonalRamp": [
+          "oklch(15% 0.0601 178.82)",
+          "oklch(26% 0.0601 178.82)",
+          "oklch(38% 0.0601 178.82)",
+          "oklch(49% 0.0601 178.82)",
+          "oklch(61% 0.0601 178.82)",
+          "oklch(72% 0.0601 178.82)",
+          "oklch(84% 0.0601 178.82)",
+          "oklch(95% 0.0601 178.82)"
+        ]
+      },
+      "interest": {
+        "role": "secondary",
+        "displayName": "Terracota de atractivos",
+        "tonalRamp": [
+          "oklch(15% 0.1122 52.39)",
+          "oklch(26% 0.1122 52.39)",
+          "oklch(38% 0.1122 52.39)",
+          "oklch(49% 0.1122 52.39)",
+          "oklch(61% 0.1122 52.39)",
+          "oklch(72% 0.1122 52.39)",
+          "oklch(84% 0.1122 52.39)",
+          "oklch(95% 0.1122 52.39)"
+        ]
+      },
+      "station": {
+        "role": "secondary",
+        "displayName": "Azul del tótem",
+        "tonalRamp": [
+          "oklch(15% 0.1279 254.94)",
+          "oklch(26% 0.1279 254.94)",
+          "oklch(38% 0.1279 254.94)",
+          "oklch(49% 0.1279 254.94)",
+          "oklch(61% 0.1279 254.94)",
+          "oklch(72% 0.1279 254.94)",
+          "oklch(84% 0.1279 254.94)",
+          "oklch(95% 0.1279 254.94)"
+        ]
+      },
+      "focus": {
+        "role": "secondary",
+        "displayName": "Foco cálido",
+        "tonalRamp": [
+          "oklch(15% 0.1330 54.94)",
+          "oklch(26% 0.1330 54.94)",
+          "oklch(38% 0.1330 54.94)",
+          "oklch(49% 0.1330 54.94)",
+          "oklch(61% 0.1330 54.94)",
+          "oklch(72% 0.1330 54.94)",
+          "oklch(84% 0.1330 54.94)",
+          "oklch(95% 0.1330 54.94)"
+        ]
+      },
+      "map-background": {
+        "role": "neutral",
+        "displayName": "Fondo del mapa",
+        "tonalRamp": [
+          "oklch(15% 0.0080 114.22)",
+          "oklch(26% 0.0080 114.22)",
+          "oklch(38% 0.0080 114.22)",
+          "oklch(49% 0.0080 114.22)",
+          "oklch(61% 0.0080 114.22)",
+          "oklch(72% 0.0080 114.22)",
+          "oklch(84% 0.0080 114.22)",
+          "oklch(95% 0.0080 114.22)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie blanca",
+        "tonalRamp": [
+          "oklch(15% 0.0000 89.88)",
+          "oklch(26% 0.0000 89.88)",
+          "oklch(38% 0.0000 89.88)",
+          "oklch(49% 0.0000 89.88)",
+          "oklch(61% 0.0000 89.88)",
+          "oklch(72% 0.0000 89.88)",
+          "oklch(84% 0.0000 89.88)",
+          "oklch(95% 0.0000 89.88)"
+        ]
+      },
+      "map-foreground": {
+        "role": "neutral",
+        "displayName": "Texto del mapa",
+        "tonalRamp": [
+          "oklch(15% 0.0465 184.39)",
+          "oklch(26% 0.0465 184.39)",
+          "oklch(38% 0.0465 184.39)",
+          "oklch(49% 0.0465 184.39)",
+          "oklch(61% 0.0465 184.39)",
+          "oklch(72% 0.0465 184.39)",
+          "oklch(84% 0.0465 184.39)",
+          "oklch(95% 0.0465 184.39)"
+        ]
+      },
+      "map-border": {
+        "role": "neutral",
+        "displayName": "Borde suave",
+        "tonalRamp": [
+          "oklch(15% 0.0144 148.77)",
+          "oklch(26% 0.0144 148.77)",
+          "oklch(38% 0.0144 148.77)",
+          "oklch(49% 0.0144 148.77)",
+          "oklch(61% 0.0144 148.77)",
+          "oklch(72% 0.0144 148.77)",
+          "oklch(84% 0.0144 148.77)",
+          "oklch(95% 0.0144 148.77)"
+        ]
+      },
+      "message-background": {
+        "role": "neutral",
+        "displayName": "Mensaje de la guía",
+        "tonalRamp": [
+          "oklch(15% 0.0163 133.82)",
+          "oklch(26% 0.0163 133.82)",
+          "oklch(38% 0.0163 133.82)",
+          "oklch(49% 0.0163 133.82)",
+          "oklch(61% 0.0163 133.82)",
+          "oklch(72% 0.0163 133.82)",
+          "oklch(84% 0.0163 133.82)",
+          "oklch(95% 0.0163 133.82)"
+        ]
+      },
+      "suggestion-background": {
+        "role": "neutral",
+        "displayName": "Acción sugerida",
+        "tonalRamp": [
+          "oklch(15% 0.0177 92.68)",
+          "oklch(26% 0.0177 92.68)",
+          "oklch(38% 0.0177 92.68)",
+          "oklch(49% 0.0177 92.68)",
+          "oklch(61% 0.0177 92.68)",
+          "oklch(72% 0.0177 92.68)",
+          "oklch(84% 0.0177 92.68)",
+          "oklch(95% 0.0177 92.68)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "controls": {
+        "displayName": "Controles",
+        "purpose": "Acciones táctiles del mapa."
+      },
+      "place-title": {
+        "displayName": "Nombre de lugar",
+        "purpose": "Título en las filas de lugares."
+      },
+      "description": {
+        "displayName": "Descripción",
+        "purpose": "Lectura de una ficha."
+      }
+    },
+    "shadows": [
+      {
+        "name": "search",
+        "value": "0 3px 10px #123f3510",
+        "purpose": "Separar búsqueda del fondo."
+      },
+      {
+        "name": "overview",
+        "value": "0 4px 16px #183c3420",
+        "purpose": "Control de encuadre sobre el mapa."
+      },
+      {
+        "name": "keyboard",
+        "value": "0 8px 36px #103c3435",
+        "purpose": "Teclado táctil sobre el contenido."
+      }
+    ],
+    "motion": [],
+    "breakpoints": [
+      {
+        "name": "map-mobile-max",
+        "value": "750px"
+      },
+      {
+        "name": "map-compact-max",
+        "value": "1050px"
+      },
+      {
+        "name": "map-wide-min",
+        "value": "1500px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Acción principal",
+      "kind": "button",
+      "refersTo": "map-primary",
+      "description": "Acción de recorrido en el panel.",
+      "html": "<button class=\"ds-primary\">Cómo llegar</button>",
+      "css": ".ds-primary{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;justify-content:center;min-height:44px;padding:12px;border:0;border-radius:8px;background:#176d60;color:#fff;font-size:14px;font-weight:700;cursor:pointer}.ds-primary:hover{background:#135647}.ds-primary:focus-visible{outline:3px solid #bb6722;outline-offset:3px}.ds-primary:disabled{opacity:.5;cursor:wait}"
+    },
+    {
+      "name": "Acción de parada",
+      "kind": "button",
+      "refersTo": "suggestion-action",
+      "description": "Confirmación explícita de una parada sugerida.",
+      "html": "<button class=\"ds-stop\">Añadir parada <small>+3 min</small></button>",
+      "css": ".ds-stop{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;gap:7px;min-height:44px;background:#f4f0e3;color:#694c23;border:0;border-radius:7px;padding:0 11px;font-size:13px;font-weight:700;cursor:pointer}.ds-stop small{margin-left:auto;font-variant-numeric:tabular-nums}.ds-stop:focus-visible{outline:3px solid #bb6722;outline-offset:3px}.ds-stop:disabled{opacity:.5;cursor:wait}"
+    },
+    {
+      "name": "Acción de texto",
+      "kind": "button",
+      "description": "Regreso a la lista o acceso a lectura en voz.",
+      "html": "<button class=\"ds-text\">Todos los lugares</button>",
+      "css": ".ds-text{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;gap:6px;min-height:44px;background:none;border:0;color:#19664f;font-size:13px;padding:0;font-weight:700;cursor:pointer}.ds-text:focus-visible{outline:3px solid #bb6722;outline-offset:3px}"
+    },
+    {
+      "name": "Búsqueda",
+      "kind": "input",
+      "description": "Campo de búsqueda táctil del territorio.",
+      "html": "<label class=\"ds-search\"><input aria-label=\"Buscar lugares\" placeholder=\"Busca un lugar o algo que hacer…\"></label>",
+      "css": ".ds-search{display:flex;gap:12px;background:#fff;border-radius:10px;padding:0 15px;color:#326d5c;box-shadow:0 3px 10px #123f3510}.ds-search input{font-family:Arial,Helvetica,sans-serif;height:50px;min-width:0;width:100%;border:0;background:none;color:#163f3a;font-size:16px}.ds-search input::placeholder{color:#526c63}.ds-search input:focus-visible{outline:3px solid #bb6722;outline-offset:3px}"
+    },
+    {
+      "name": "Navegación por sector",
+      "kind": "nav",
+      "refersTo": "sector-selected",
+      "description": "Sectores con estado seleccionado visible.",
+      "html": "<nav class=\"ds-sectors\" aria-label=\"Sector\"><button aria-pressed=\"true\">Todo el circuito</button><button aria-pressed=\"false\">Ralco</button></nav>",
+      "css": ".ds-sectors{display:flex;gap:8px;flex-wrap:wrap}.ds-sectors button{font-family:Arial,Helvetica,sans-serif;min-height:44px;background:#fff;border:1px solid #d1ded3;color:#365c4f;border-radius:24px;padding:0 17px;font-size:14px;font-weight:600;cursor:pointer}.ds-sectors button[aria-pressed=true]{color:#fff;background:#174f45;border-color:#174f45}.ds-sectors button:focus-visible{outline:3px solid #bb6722;outline-offset:3px}"
+    },
+    {
+      "name": "Identificación de ejemplo",
+      "kind": "chip",
+      "description": "Aviso factual de un registro ficticio.",
+      "html": "<span class=\"ds-demo\">Ficha de ejemplo · sin ubicación verificada</span>",
+      "css": ".ds-demo{font-family:Arial,Helvetica,sans-serif;display:inline-block;font-size:11px;background:#f8ecd8;color:#75501e;padding:7px 9px;border-radius:5px}"
+    },
+    {
+      "name": "Mensaje de Quíbar",
+      "kind": "card",
+      "refersTo": "guide-message",
+      "description": "Texto de orientación sin reproducción automática.",
+      "html": "<div class=\"ds-guide\"><p>Puedes añadir una parada antes de llegar.</p></div>",
+      "css": ".ds-guide{font-family:Arial,Helvetica,sans-serif;display:flex;gap:10px;background:#edf4e9;border-radius:10px;padding:16px;color:#285637}.ds-guide p{font-size:14px;line-height:1.6;margin:0}"
+    },
+    {
+      "name": "Fila de lugar",
+      "kind": "custom",
+      "description": "Nombre, categoría y estado en una fila seleccionable.",
+      "html": "<button class=\"ds-place\"><span><strong>Nombre del lugar</strong><small>Ralco · Atractivo</small></span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M5 12h14m-6-6 6 6-6 6\"/></svg></button>",
+      "css": ".ds-place{font-family:Arial,Helvetica,sans-serif;width:100%;display:flex;gap:12px;align-items:center;min-height:44px;text-align:left;background:none;border:0;border-bottom:1px solid #e4eae2;padding:16px 0;color:#1c4e40;cursor:pointer}.ds-place>span{flex:1}.ds-place strong{display:block;font-size:16px;line-height:1.3}.ds-place small{display:block;color:#567163;font-size:12px;margin-top:5px;line-height:1.4}.ds-place:hover{background:#f6f8f3}.ds-place:focus-visible{outline:3px solid #bb6722;outline-offset:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Quíbar como guía del territorio existente",
+    "overview": "Esta descripción conserva la identidad implementada: verdes profundos, superficies claras y la mascota suministrada. Es un registro del código actual, no una nueva dirección de marca. Las cifras del frontmatter corresponden a patrones reutilizados en la experiencia del mapa; la administración conserva sus variables globales.",
+    "keyCharacteristics": [
+      "Contraste entre panel blanco y cabecera verde de la guía.",
+      "Controles táctiles y texto directo en español.",
+      "Identificación visual distinta para comercios, atractivos y tótem."
+    ],
+    "rules": [
+      {
+        "name": "The Geographic Identity Rule",
+        "body": "Mantener la correspondencia entre colores de marcadores y su leyenda; acompañar el color con forma o texto.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do conservar la mascota suministrada y la identidad verde existente.",
+      "Do mantener nombres y estados comprensibles junto a los símbolos del mapa.",
+      "Do conservar foco visible y controles táctiles amplios.",
+      "Do usar separadores y cambios de fondo para ordenar el panel."
+    ],
+    "donts": [
+      "Don't comunicar categoría, selección o estado únicamente mediante color.",
+      "Don't ocultar los avisos de datos ficticios o ubicación pendiente.",
+      "Don't añadir movimiento que ignore la preferencia de movimiento reducido."
+    ]
+  }
+}

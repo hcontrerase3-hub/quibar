@@ -13,3 +13,8 @@ dist/
 *.tsbuildinfo
 .quibar/
 backups/
+
+.impeccable/review/
+
+*.osm.pbf
+data/routing/

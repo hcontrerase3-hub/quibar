@@ -2,7 +2,7 @@ import { BedDouble, Coffee, Mountain, Palette, ShoppingBag, Tent, UtensilsCrosse
 import type { LucideIcon } from "lucide-react";
 
 export type Category = "Alojamiento" | "Gastronomía" | "Artesanía" | "Turismo" | "Comercio";
-export type Commune = "Quilaco" | "Santa Bárbara";
+export type Commune = "Quilaco" | "Santa Bárbara" | "Alto Biobío";
 export type Business = {
   id: string; name: string; category: Category; commune: Commune; area: string;
   summary: string; description: string; offerings: string[]; hours: string;
