@@ -3,5 +3,12 @@
 services:
   app:
     network_mode: host
+    environment:
+      QUIBAR_ROUTING_URL: http://127.0.0.1:${QUIBAR_ROUTER_PORT:-18002}
+      QUIBAR_SPEECH_URL: http://127.0.0.1:${QUIBAR_VOICE_PORT:-15000}
   model-init:
     network_mode: host
+  routing:
+    ports: ['127.0.0.1:${QUIBAR_ROUTER_PORT:-18002}:8002']
+  speech:
+    ports: ['127.0.0.1:${QUIBAR_VOICE_PORT:-15000}:5000']

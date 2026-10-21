@@ -33,7 +33,7 @@ def main():
     roads.add_argument("--replace", action="store_true")
     sub.add_parser("prune", help="Eliminar métricas de más de 90 días y sesiones vencidas")
     args = parser.parse_args()
-    if args.command != "backup":
+    if args.command not in ("backup", "import-roads"):
         initialize()
     if args.command == "setup-admin":
         with session() as db:

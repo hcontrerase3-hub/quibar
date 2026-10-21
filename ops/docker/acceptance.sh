@@ -13,7 +13,7 @@ cleanup() {
 }
 trap cleanup EXIT
 "${dc[@]}" up -d --build --wait app nginx maintenance
-"${dc[@]}" run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/tests.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container -v
+"${dc[@]}" run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/tests.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes -v
 "${dc[@]}" run --rm --no-deps -e QUIBAR_SMOKE=temporary-data-only tools python -m backend.container_smoke
 "${dc[@]}" up -d --force-recreate --wait app nginx
 "${dc[@]}" run --rm --no-deps -e QUIBAR_SMOKE=temporary-data-only -e QUIBAR_SMOKE_PHASE=persist tools python -m backend.container_smoke

@@ -11,6 +11,11 @@ x-app: &app
     QUIBAR_MODEL_KEEP_ALIVE: ${QUIBAR_MODEL_KEEP_ALIVE:--1}
     QUIBAR_MODEL_PULL: ${QUIBAR_MODEL_PULL:-1}
     QUIBAR_OLLAMA_MODE: ${QUIBAR_OLLAMA_MODE:-docker}
+    QUIBAR_ROUTING_DIR: /state/routing
+    QUIBAR_ROUTING_URL: ${QUIBAR_ROUTING_URL:-http://routing:8002}
+    QUIBAR_SPEECH_URL: ${QUIBAR_SPEECH_URL:-http://speech:5000}
+    QUIBAR_WALK_DETOUR_MIN: ${QUIBAR_WALK_DETOUR_MIN:-5}
+    QUIBAR_DRIVE_DETOUR_MIN: ${QUIBAR_DRIVE_DETOUR_MIN:-10}
     QUIBAR_ADMIN_NETWORKS: 127.0.0.1/32
   volumes:
     - state:/state
@@ -49,6 +54,29 @@ services:
     restart: unless-stopped
     depends_on:
       app: {condition: service_healthy}
+  routing:
+    image: ghcr.io/valhalla/valhalla-scripted@sha256:eaad372b8ef31e3e4592c442875aeb1375fbf5aeaa0d259b469e3b46583ab10d
+    profiles: [territory]
+    entrypoint: [/bin/sh, /quibar/start.sh]
+    volumes:
+      - state:/state
+      - ./ops/routing/start.sh:/quibar/start.sh:ro
+    environment:
+      path_extension: ''
+      server_threads: '2'
+      build_elevation: 'False'
+      build_time_zones: 'False'
+      build_admins: 'True'
+      use_default_speeds_config: 'False'
+    restart: unless-stopped
+  speech:
+    profiles: [territory]
+    build:
+      context: .
+      dockerfile: ops/speech/Dockerfile
+    volumes: [voices:/models]
+    restart: unless-stopped
+    security_opt: [no-new-privileges:true]
   ollama:
     image: ollama/ollama:0.18.0
     profiles: [ollama]
@@ -68,3 +96,4 @@ volumes:
   state:
   socket:
   models:
+  voices:

@@ -10,3 +10,7 @@ dist
 backend/media
 backups
 .quibar*
+
+**/*.osm.pbf
+data/routing
+.impeccable/review

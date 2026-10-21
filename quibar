@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")"
 usage() {
-  echo 'Uso: ./quibar [--dev] iniciar|desarrollar|detener|logs|probar|admin|respaldo|importar-mapa|importar-datos [argumentos]'
+  echo 'Uso: ./quibar [--dev] iniciar|desarrollar|detener|logs|probar|admin|respaldo|importar-mapa|preparar-rutas|importar-datos [argumentos]'
 }
 [[ $# -gt 0 ]] || { usage; exit 0; }
 dev=0
@@ -10,7 +10,7 @@ if [[ "$1" == --dev ]]; then dev=1; shift; fi
 action="${1:-}"
 [[ $# -gt 0 ]] && shift
 [[ "$action" != desarrollar ]] || { dev=1; action=iniciar; }
-case "$action" in iniciar|detener|logs|probar|admin|respaldo|importar-mapa|importar-datos) ;; *) usage; exit 1 ;; esac
+case "$action" in iniciar|detener|logs|probar|admin|respaldo|importar-mapa|preparar-rutas|importar-datos) ;; *) usage; exit 1 ;; esac
 command -v docker >/dev/null || { echo 'Instala Docker Desktop o Docker Engine con Compose.' >&2; exit 1; }
 docker compose version >/dev/null
 docker info >/dev/null 2>&1 || { echo 'Inicia Docker y comprueba el acceso al motor.' >&2; exit 1; }
@@ -21,7 +21,7 @@ project=quibar
 if [[ "$dev" == 1 ]]; then config=.quibar/development.env; project=quibar-dev; fi
 if [[ ! -f "$config" ]]; then
   cp docker.env.example "$config"
-  if [[ "$dev" == 1 ]]; then printf '\nQUIBAR_PORT=8001\n' >> "$config"; fi
+  if [[ "$dev" == 1 ]]; then printf '\nQUIBAR_PORT=8001\nQUIBAR_ROUTER_PORT=18003\nQUIBAR_VOICE_PORT=15001\n' >> "$config"; fi
 fi
 lock=""
 cleanup() { if [[ -n "$lock" ]]; then rmdir "$lock"; fi; }
@@ -40,6 +40,11 @@ case "$mode" in
     if [[ "$(uname -s)" == Linux ]]; then
       dc+=(-f compose.native-linux.yaml)
       export OLLAMA_URL=http://127.0.0.1:11434
+      # Existing development configs predate the territorial service ports.
+      if [[ "$dev" == 1 ]]; then
+        if ! grep -q '^QUIBAR_ROUTER_PORT=' "$config"; then export QUIBAR_ROUTER_PORT=18003; fi
+        if ! grep -q '^QUIBAR_VOICE_PORT=' "$config"; then export QUIBAR_VOICE_PORT=15001; fi
+      fi
     else
       export OLLAMA_URL=http://host.docker.internal:11434
     fi ;;
@@ -50,9 +55,9 @@ case "$mode" in
     export OLLAMA_URL="$remote_url" QUIBAR_MODEL_PULL=0 ;;
   *) echo 'QUIBAR_OLLAMA_MODE debe ser docker, native o remote' >&2; exit 1 ;;
 esac
-compose() { "${dc[@]}" --profile tools --profile model --profile ollama "$@"; }
+compose() { "${dc[@]}" --profile tools --profile model --profile ollama --profile territory "$@"; }
 stopped() {
-  [[ -z "$(compose ps --status running -q app maintenance)" ]] || {
+  [[ -z "$(compose ps --status running -q app maintenance routing)" ]] || {
     echo 'Detén la aplicación antes de importar datos: ./quibar detener (o --dev detener).' >&2; exit 1;
   }
 }
@@ -61,6 +66,7 @@ case "$action" in
     services=(app nginx maintenance)
     [[ "$dev" != 1 ]] || services+=(web)
     compose up -d --build --wait "${services[@]}"
+    compose up -d --build routing speech
     if [[ "$mode" == docker ]]; then compose up -d ollama; fi
     compose up -d --force-recreate model-init
     echo 'Quíbar iniciado. Modelo en preparación: ./quibar logs model-init'
@@ -74,17 +80,17 @@ case "$action" in
     else compose exec app python -m backend.cli "$@"; fi ;;
   probar)
     compose build app
-    compose run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container -v
+    compose run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes -v
     docker build --target frontend -t "$project-frontend-tests" .
     docker run --rm "$project-frontend-tests" npm test ;;
   respaldo)
     mkdir -p backups
     destination="${1:-backups/$(date -u +%Y%m%dT%H%M%SZ).tar.gz}"
     [[ ! -e "$destination" ]] || { echo 'El destino ya existe' >&2; exit 1; }
-    running=$(compose ps --status running --services app maintenance)
+    running=$(compose ps --status running --services app maintenance routing)
     restore() { if [[ -n "$running" ]]; then while IFS= read -r service; do compose start "$service"; done <<< "$running"; fi; }
     trap 'restore; cleanup' EXIT
-    compose stop app maintenance
+    compose stop app maintenance routing
     # noclobber prevents an accidental overwrite; partial archives are reported.
     (set -o noclobber; compose run --rm -T --no-deps tools python -m backend.container_ops backup > "$destination")
     echo "Respaldo: $destination (guarda también $config por separado)" ;;
@@ -93,6 +99,18 @@ case "$action" in
     map_path="$(cd -- "$(dirname -- "$1")" && pwd -P)/$(basename -- "$1")"
     shift
     compose run --rm --no-deps -v "$map_path:/import/map.mbtiles:ro" tools python -m backend.cli import-map /import/map.mbtiles "$@" ;;
+  preparar-rutas)
+    [[ $# -ge 1 && -f "$1" ]] || { echo 'Indica una extracción .osm.pbf del circuito' >&2; exit 1; }
+    road_path="$(cd -- "$(dirname -- "$1")" && pwd -P)/$(basename -- "$1")"
+    shift
+    compose build app
+    was_running=$(compose ps --status running -q routing)
+    restore_roads() { if [[ -n "$was_running" ]]; then compose start routing; fi; }
+    trap 'restore_roads; cleanup' EXIT
+    compose stop routing
+    compose run --rm --no-deps --user 0:0 -v "$road_path:/import/region.osm.pbf:ro" tools python -m backend.cli import-roads /import/region.osm.pbf "$@"
+    compose up -d --force-recreate routing
+    echo 'Preparación iniciada: ./quibar logs routing' ;;
   importar-datos)
     [[ $# == 1 && -d "$1" ]] || { echo 'Indica la carpeta de datos nativa, con los servicios nativos detenidos.' >&2; exit 1; }
     stopped

@@ -100,3 +100,9 @@ class RouteAcceptance(unittest.TestCase):
             self.assertEqual(result['distance_m'],5500)
             self.assertEqual(result['geometry']['coordinates'][1],[-71.62,-37.88])
             self.assertEqual(client.return_value.__enter__.return_value.post.call_args.kwargs['json']['costing'],'pedestrian')
+
+    def test_editing_place_invalidates_previous_audio(self):
+        with patch('backend.routes.road_route',side_effect=self.engine):
+            trip=self.client.post('/api/quibar/routes',json=self.data).json()
+        self.client.put('/api/quibar/admin/interests/'+self.dest['id'],json={**self.dest,'name':'Nombre sintético actualizado'},headers=self.headers).raise_for_status()
+        self.assertEqual(self.client.post('/api/quibar/routes/speech',json={'narration_id':trip['narration_id']}).status_code,410)

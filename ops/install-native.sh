@@ -34,7 +34,7 @@ install -d -o quibar -g quibar -m 700 /var/lib/quibar /var/lib/quibar/media
 install -d -m 755 /opt/quibar
 # Environment and persistent data live outside the release directory.
 rsync -a --exclude=.git --exclude=.quibar --exclude=backups --exclude=.env --exclude='.env.*' --exclude=.venv --exclude=node_modules \
-  --exclude=__pycache__ --exclude='*.sqlite3*' --exclude='*.mbtiles' --exclude=backend/media --exclude=.next \
+  --exclude=__pycache__ --exclude='*.sqlite3*' --exclude='*.mbtiles' --exclude='*.osm.pbf' --exclude=data/routing --exclude=.impeccable/review --exclude=backend/media --exclude=.next \
   "$source_dir/" /opt/quibar/
 python3 -m venv /opt/quibar/.venv
 /opt/quibar/.venv/bin/python -m pip install -r /opt/quibar/backend/requirements.lock

@@ -36,7 +36,7 @@ if [[ "$kiosk" == 1 ]]; then
 fi
 install -d -m 755 /opt/quibar
 rsync -a --exclude=.git --exclude=.quibar --exclude=.env --exclude='.env.*' --exclude=.venv --exclude=node_modules \
-  --exclude=__pycache__ --exclude='*.sqlite3*' --exclude='*.mbtiles' --exclude=backend/media --exclude=backups \
+  --exclude=__pycache__ --exclude='*.sqlite3*' --exclude='*.mbtiles' --exclude='*.osm.pbf' --exclude=data/routing --exclude=.impeccable/review --exclude=backend/media --exclude=backups \
   "$source_dir/" /opt/quibar/
 install -d -m 700 /opt/quibar/.quibar
 if [[ ! -f /opt/quibar/.quibar/production.env ]]; then

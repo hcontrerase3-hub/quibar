@@ -88,3 +88,19 @@ class ContainerData(unittest.TestCase):
             container_ops.model()
         self.assertEqual(result.exception.code, 0)
         client.return_value.__enter__.return_value.stream.assert_not_called()
+
+    def test_import_roads_does_not_initialize_or_replace_catalog(self):
+        from .cli import main
+        from .roads import install_roads
+        source = self.root / 'roads.osm.pbf'
+        # Header-only unit fixture; the real Valhalla acceptance uses a complete PBF.
+        source.write_bytes(b'OSMHeader unit fixture, never used for routing')
+        with patch.dict(os.environ, {'QUIBAR_ROUTING_DIR': str(self.state / 'routing')}):
+            with patch('sys.argv', ['quibar', 'import-roads', str(source)]):
+                main()
+            self.assertFalse((self.state / 'quibar.sqlite3').exists())
+            self.assertTrue((self.state / 'routing/region.osm.pbf').is_file())
+            with self.assertRaises(ValueError):
+                install_roads(source)
+            install_roads(source, replace=True)
+            self.assertEqual(len(list(self.state.glob('routing.previous-*'))), 1)
