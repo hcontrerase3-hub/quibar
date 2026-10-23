@@ -100,9 +100,75 @@ class RouteAcceptance(unittest.TestCase):
             self.assertEqual(result['distance_m'],5500)
             self.assertEqual(result['geometry']['coordinates'][1],[-71.62,-37.88])
             self.assertEqual(client.return_value.__enter__.return_value.post.call_args.kwargs['json']['costing'],'pedestrian')
+            self.assertTrue(all(p['search_cutoff'] == 100 and p['radius'] == 50
+                                for p in client.return_value.__enter__.return_value.post.call_args.kwargs['json']['locations']))
+
+    def test_routing_failures_distinguish_missing_nearby_roads_and_service_errors(self):
+        from fastapi import HTTPException
+        points = [dict(latitude=-37.67, longitude=-72.02), dict(latitude=-37.88, longitude=-71.62)]
+        cases = [(400, {'error_code': 171}, 422, '100 metros'),
+                 (400, {'error_code': 442}, 422, 'camino transitable'),
+                 (404, {}, 422, 'camino transitable'),
+                 (503, {}, 503, 'rutas locales no están disponibles')]
+        for status, payload, expected, message in cases:
+            with self.subTest(status=status, payload=payload), patch('backend.routes.httpx.Client') as client:
+                client.return_value.__enter__.return_value.post.return_value = httpx.Response(
+                    status, json=payload, request=httpx.Request('POST', 'http://routing/route'))
+                with self.assertRaises(HTTPException) as error:
+                    routes.road_route(points, 'walking')
+                self.assertEqual(error.exception.status_code, expected)
+                self.assertIn(message, error.exception.detail)
 
     def test_editing_place_invalidates_previous_audio(self):
         with patch('backend.routes.road_route',side_effect=self.engine):
             trip=self.client.post('/api/quibar/routes',json=self.data).json()
         self.client.put('/api/quibar/admin/interests/'+self.dest['id'],json={**self.dest,'name':'Nombre sintético actualizado'},headers=self.headers).raise_for_status()
         self.assertEqual(self.client.post('/api/quibar/routes/speech',json={'narration_id':trip['narration_id']}).status_code,410)
+
+    def demo_business(self):
+        business = next(p for p in self.client.get('/api/quibar/admin/businesses').json() if p['id'] == 'bosque-sereno')
+        business.update(sector='Huequecura', latitude=-37.775, longitude=-71.82,
+                        location_verified=True, location_source='Fixture sintético', demo=True)
+        self.client.put('/api/quibar/admin/businesses/bosque-sereno', json=business, headers=self.headers).raise_for_status()
+        return 'business:bosque-sereno'
+
+    def test_demo_destinations_and_stops_have_routes_and_labelled_narration(self):
+        key = self.demo_business()
+        for profile in ['walking', 'driving']:
+            for data in [{**self.data, 'destination': key, 'profile': profile},
+                         {**self.data, 'stops': [key], 'profile': profile}]:
+                with self.subTest(data=data), patch('backend.routes.road_route', side_effect=self.engine), patch('backend.routes.httpx.Client') as transport:
+                    transport.return_value.__enter__.return_value.post.side_effect = httpx.ConnectError('IA ausente')
+                    response = self.client.post('/api/quibar/routes', json=data)
+                    self.assertEqual(response.status_code, 200, response.text)
+                    trip = response.json()
+                    self.assertIn('Recorrido de demostración: incluye lugares ficticios.', trip['text'])
+                    target = trip['stops'][0] if data['stops'] else trip['destination']
+                    self.assertTrue(target['demo'])
+                    self.assertEqual((target['latitude'], target['longitude']), (-37.775, -71.82))
+                    narration = self.client.post('/api/quibar/routes/narration', json={**data, 'suggestions': []})
+                    self.assertEqual(narration.status_code, 200, narration.text)
+                    self.assertIn('Recorrido de demostración: incluye lugares ficticios.', narration.json()['text'])
+
+    def test_demo_suggestions_are_labelled_and_never_automatically_added(self):
+        key = self.demo_business()
+        with patch('backend.routes.road_route', side_effect=self.engine):
+            trip = self.client.post('/api/quibar/routes', json=self.data).json()
+            self.assertEqual(trip['stops'], [])
+            self.assertNotIn('Recorrido de demostración', trip['text'])
+            response = self.client.post('/api/quibar/routes/suggestions', json=self.data)
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertTrue(any(p['place']['key'] == key and p['place']['demo'] for p in response.json()['suggestions']))
+            self.assertIn('Las sugerencias marcadas como ejemplo son lugares ficticios.', response.json()['text'])
+
+    def test_model_narration_preserves_demo_notice(self):
+        key = self.demo_business()
+        with patch('backend.routes.road_route', side_effect=self.engine), patch('backend.routes.httpx.Client') as transport, patch('backend.app.valid_reply', return_value=True):
+            transport.return_value.__enter__.return_value.post.return_value = httpx.Response(200,
+                json={'message': {'content': '{"reply": "Puedes conocer Parada sintética."}'}},
+                request=httpx.Request('POST', 'http://model/api/chat'))
+            response = self.client.post('/api/quibar/routes/narration', json={
+                **self.data, 'destination': key, 'suggestions': ['interest:' + self.near['id']]})
+            self.assertEqual(response.status_code, 200, response.text)
+            self.assertEqual(response.json()['mode'], 'ia_local')
+            self.assertIn('Recorrido de demostración: incluye lugares ficticios.', response.json()['text'])

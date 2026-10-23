@@ -80,7 +80,7 @@ case "$action" in
     else compose exec app python -m backend.cli "$@"; fi ;;
   probar)
     compose build app
-    compose run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes -v
+    compose run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes backend.test_demo_points -v
     docker build --target frontend -t "$project-frontend-tests" .
     docker run --rm "$project-frontend-tests" npm test ;;
   respaldo)

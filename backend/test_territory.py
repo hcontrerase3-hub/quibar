@@ -73,3 +73,44 @@ class TerritoryAcceptance(unittest.TestCase):
         for changes in [{'access_verified': False}, {'latitude': 20}, {'sector':'Quilaco'}]:
             response = self.client.post('/api/quibar/admin/interests', json={**self.place, **changes}, headers=self.headers)
             self.assertEqual(response.status_code, 422, response.text)
+
+    def test_interest_demo_flag_survives_admin_edits_and_is_public(self):
+        response = self.client.post('/api/quibar/admin/interests', json={**self.place, 'demo': True}, headers=self.headers)
+        self.assertEqual(response.status_code, 201, response.text)
+        data = response.json()
+        self.assertTrue(data['demo'])
+        data['name'] = 'Atractivo ficticio editado'
+        self.client.put('/api/quibar/admin/interests/' + data['id'], json=data, headers=self.headers).raise_for_status()
+        public = next(p for p in self.client.get('/api/quibar/places').json()['places'] if p['id'] == data['id'])
+        self.assertTrue(public['demo'])
+        self.assertTrue(public['located'])
+
+    def test_demo_business_uses_saved_coordinates_and_keeps_publication_filters(self):
+        cases = [
+            ({}, True, True),
+            ({'location_verified': False}, True, False),
+            ({'location_source': ''}, True, False),
+            ({'latitud': None, 'longitud': None}, True, False),
+            ({'latitud': 20}, True, False),
+            ({'estado_moderacion': 'Pendiente'}, False, False),
+            ({'estado_moderacion': 'Suspendido'}, False, False),
+            ({'category_active': False}, False, False),
+        ]
+        for changes, visible, located in cases:
+            with self.subTest(changes=changes):
+                with session() as db:
+                    row = db.scalar(select(Comercio).where(Comercio.public_id == 'bosque-sereno'))
+                    values = dict(demo=True, estado_moderacion='Aprobado', sector='Santa Bárbara',
+                                  latitud=-37.74, longitud=-71.89, location_verified=True,
+                                  location_source='Punto sintético elegido para la prueba')
+                    values.update({k: v for k, v in changes.items() if k != 'category_active'})
+                    for key, value in values.items():
+                        setattr(row, key, value)
+                    row.rubro.activo = changes.get('category_active', True)
+                    db.commit()
+                place = next((p for p in self.client.get('/api/quibar/places').json()['places'] if p['id'] == 'bosque-sereno'), None)
+                self.assertEqual(place is not None, visible)
+                if place:
+                    self.assertTrue(place['demo'])
+                    self.assertEqual(place['located'], located)
+                    self.assertEqual((place['latitude'], place['longitude']), (-37.74, -71.89) if located else (None, None))

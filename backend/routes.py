@@ -100,6 +100,13 @@ def road_route(points, profile):
                 'directions_options': {'units': 'kilometers', 'language': 'es-ES'},
                 'shape_format': 'polyline6'})
         if response.status_code in (400, 404):
+            try:
+                error_code = response.json().get('error_code')
+            except (ValueError, AttributeError):
+                error_code = None
+            if error_code == 171:
+                raise HTTPException(422, 'No se encontró un camino apto a menos de 100 metros de alguno de los puntos. '
+                                    'Revisa la ubicación del tótem y los accesos al destino o las paradas en administración.')
             raise HTTPException(422, 'No se encontró un camino transitable para este recorrido y modalidad.')
         response.raise_for_status()
         trip = response.json()['trip']
@@ -143,6 +150,11 @@ def remember(text, keys):
 def brief(data, route, destination, suggestions=()):
     modality = 'a pie' if data.profile == 'walking' else 'en vehículo'
     text = f"Para llegar a {destination['name']} {modality}, el recorrido estimado es de {max(1, round(route['duration_s'] / 60))} minutos."
+    demo_stop = bool(data.stops) and any(p.get('demo') for p in public_places() if p['key'] in data.stops)
+    if destination.get('demo') or demo_stop:
+        text = 'Recorrido de demostración: incluye lugares ficticios. ' + text
+    if any(p['place'].get('demo') for p in suggestions):
+        text += ' Las sugerencias marcadas como ejemplo son lugares ficticios.'
     if suggestions:
         text += ' En el camino puedes conocer ' + ', '.join(p['place']['name'] for p in suggestions) + '. Añade una parada si te interesa.'
     return text

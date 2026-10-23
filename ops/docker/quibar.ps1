@@ -79,7 +79,7 @@ switch ($action) {
     }
     probar {
         DC build app
-        DC run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes -v
+        DC run --rm --no-deps -e QUIBAR_DB_PATH=/tmp/test.sqlite3 tools python -m unittest backend.test_quibar backend.test_stack backend.test_container backend.test_territory backend.test_routes backend.test_demo_points -v
         Invoke-Docker build --target frontend -t "$project-frontend-tests" .
         Invoke-Docker run --rm "$project-frontend-tests" npm test
     }

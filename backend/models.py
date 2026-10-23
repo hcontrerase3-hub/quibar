@@ -79,6 +79,7 @@ class PuntoInteres(Base):
     source: Mapped[str] = mapped_column(Text)
     access_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(20), default="Pendiente")
+    demo: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
 
 class Totem(Base):

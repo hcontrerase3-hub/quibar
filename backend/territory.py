@@ -25,7 +25,7 @@ def within(latitude, longitude):
 
 def interest_dict(row):
     return {key: getattr(row, key) for key in ('id', 'name', 'category', 'commune', 'sector', 'description',
-            'latitude', 'longitude', 'access', 'hours', 'source', 'access_verified', 'status')}
+            'latitude', 'longitude', 'access', 'hours', 'source', 'access_verified', 'status', 'demo')}
 
 
 def public_places():
@@ -35,7 +35,7 @@ def public_places():
             continue
         located = bool(row.get('location_verified') and row.get('location_source') and
                        row['latitude'] is not None and row['longitude'] is not None and
-                       within(row['latitude'], row['longitude']) and not row['demo'])
+                       within(row['latitude'], row['longitude']))
         places.append({**row, 'kind': 'business', 'key': f"business:{row['id']}",
                        'located': located, 'latitude': row['latitude'] if located else None,
                        'longitude': row['longitude'] if located else None})
@@ -45,7 +45,7 @@ def public_places():
             if row.sector not in SECTORS or not within(row.latitude, row.longitude):
                 continue
             places.append({**interest_dict(row), 'kind': 'interest', 'key': f'interest:{row.id}',
-                           'summary': row.description[:200], 'located': True, 'demo': False,
+                           'summary': row.description[:200], 'located': True,
                            'photos': [], 'offerings': [], 'area': row.access})
     return sorted(places, key=lambda p: (p['sector'], p['name']))
 
@@ -77,6 +77,7 @@ class InterestData(BaseModel):
     source: str = Field(min_length=5, max_length=1000)
     access_verified: bool = False
     status: Literal['Pendiente', 'Aprobado', 'Suspendido'] = 'Pendiente'
+    demo: bool = False
 
     @model_validator(mode='after')
     def valid_location(self):

@@ -2,6 +2,7 @@
 from contextlib import closing
 import argparse
 import getpass
+import json
 import sqlite3
 from pathlib import Path
 
@@ -32,9 +33,32 @@ def main():
     roads.add_argument("source", type=Path)
     roads.add_argument("--replace", action="store_true")
     sub.add_parser("prune", help="Eliminar métricas de más de 90 días y sesiones vencidas")
+    demos = sub.add_parser('demo-points', help='Preparar, cargar o suspender 50 lugares ficticios de prueba')
+    actions = demos.add_subparsers(dest='demo_action', required=True)
+    prepare = actions.add_parser('prepare')
+    prepare.add_argument('--roads', type=Path, required=True)
+    prepare.add_argument('--places', type=Path, required=True)
+    prepare.add_argument('--output', type=Path, required=True)
+    prepare.add_argument('--public-url', default='http://nginx:8080')
+    prepare.add_argument('--routing-url', default='http://routing:8002')
+    for action in ['load', 'suspend']:
+        command = actions.add_parser(action)
+        command.add_argument('manifest', type=Path)
+        command.add_argument('--admin-id', type=int, required=True)
     args = parser.parse_args()
-    if args.command not in ("backup", "import-roads"):
+    if args.command not in ("backup", "import-roads") and not (args.command == 'demo-points' and args.demo_action == 'prepare'):
         initialize()
+    if args.command == 'demo-points':
+        from . import demo_points
+        try:
+            if args.demo_action == 'prepare':
+                result = demo_points.prepare(args.roads, args.places, args.output, args.public_url, args.routing_url)
+            else:
+                result = demo_points.apply(json.loads(args.manifest.read_text()), args.admin_id, suspend=args.demo_action == 'suspend')
+            print(json.dumps(result, ensure_ascii=False))
+        except (ValueError, KeyError, OSError) as error:
+            parser.error(str(error))
+        return
     if args.command == "setup-admin":
         with session() as db:
             if db.scalar(select(Usuario).where(Usuario.rol == "Administrador", Usuario.activo.is_(True))):

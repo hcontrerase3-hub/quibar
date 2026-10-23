@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Catalog, Place, Route } from './map-types';
-type Props = { catalog: Catalog; places: Place[]; selected: string | null; route: Route | null; suggested: string[]; resetKey: number; onSelect: (place: Place) => void };
-export default function TerritoryMap({catalog, places, selected, route, suggested, resetKey, onSelect}: Props) {
+type Props = { catalog: Catalog; places: Place[]; selected: string | null; route: Route | null; suggested: string[]; resetKey: number; view: 'nearby' | 'circuit'; onSelect: (place: Place) => void };
+export default function TerritoryMap({catalog, places, selected, route, suggested, resetKey, view, onSelect}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -30,6 +30,15 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
     return ()=>{controller.abort();observer.disconnect();current.remove();map.current=null;layer.current=null;};
   }, []);
   useEffect(() => {
+    const current = map.current;
+    if (!current) return;
+    const station = catalog.station;
+    const bounds = view === 'nearby' && station.configured && station.latitude != null && station.longitude != null
+      ? L.latLng(station.latitude, station.longitude).toBounds(10000)
+      : L.latLngBounds([[catalog.bounds[1], catalog.bounds[0]], [catalog.bounds[3], catalog.bounds[2]]]);
+    current.fitBounds(bounds, { padding: [28, 28] });
+  }, [resetKey, view, catalog.station.configured, catalog.station.latitude, catalog.station.longitude]);
+  useEffect(() => {
     const current=map.current, markers=layer.current;if(!current||!markers)return;
     markers.clearLayers();
     const pinned = new Set([selected, ...suggested,...(route?.stops.map(p=>p.key)??[]), route?.destination.key]);
@@ -45,14 +54,14 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
       const destination=route?.destination.key===first.key;
       const label=count>1?String(count):destination?'D':stop>=0?String(stop+1):first.kind==='business'?'●':'◆';
       const icon=L.divIcon({className:'place-marker-wrap',html:`<span class="place-marker ${count>1?'cluster':first.kind} ${first.key===selected?'selected':''} ${suggested.includes(first.key)?'suggested':''} ${destination||stop>=0?'on-route':''}">${label}</span>`,iconSize:[44,48],iconAnchor:[22,43]});
-      const marker=L.marker([first.latitude!,first.longitude!],{icon,title:count>1?`${count} lugares. Toca para acercar`:first.name,keyboard:true}).addTo(markers);
-      const tooltip=document.createElement('span');tooltip.textContent=count>1?`${count} lugares`:first.name;marker.bindTooltip(tooltip,{direction:'top',offset:[0,-30]});
+      const markerText=count>1?`${count} lugares${group.items.some(p=>p.demo)?' · incluye ubicaciones de demostración':''}`:`${first.name}${first.demo?first.kind==='business'?' · Ubicación de demostración · negocio ficticio':' · Ubicación de demostración · lugar ficticio':''}`;
+      const marker=L.marker([first.latitude!,first.longitude!],{icon,title:markerText+(count>1?'. Toca para acercar':''),keyboard:true}).addTo(markers);
+      const tooltip=document.createElement('span');tooltip.textContent=markerText;marker.bindTooltip(tooltip,{direction:'top',offset:[0,-30]});
       marker.on('click',()=>{if(count>1){current.fitBounds(L.latLngBounds(group.items.map(p=>[p.latitude!,p.longitude!])),{padding:[60,60],maxZoom:Math.min(current.getZoom()+3,current.getMaxZoom())});}else select.current(first);});
     }
-    if(catalog.station.configured){const icon=L.divIcon({className:'station-marker',html:'<span></span>',iconSize:[24,24]});L.marker([catalog.station.latitude!,catalog.station.longitude!],{icon,title:'Estás aquí: '+catalog.station.name}).addTo(markers).bindTooltip('Estás aquí');}
+    if(catalog.station.configured){const icon=L.divIcon({className:'station-marker',html:'<span></span>',iconSize:[24,24]});L.marker([catalog.station.latitude!,catalog.station.longitude!],{icon,title:'Usted está aquí: '+catalog.station.name}).addTo(markers).bindTooltip('Usted está aquí',{permanent:true,direction:'top',offset:[0,-14]});}
   },[places,selected,suggested,route,catalog.station,revision]);
   useEffect(()=>{const current=map.current;if(!current)return;routeLayer.current?.remove();routeLayer.current=null;if(route){routeLayer.current=L.geoJSON(route.geometry,{style:{color:'#126d65',weight:6,opacity:.9}}).addTo(current);current.fitBounds(routeLayer.current.getBounds(),{padding:[55,55],maxZoom:16});}},[route]);
   useEffect(()=>{const current=map.current;if(!current)return;const p=places.find(p=>p.key===selected);if(p?.located)current.panTo([p.latitude!,p.longitude!]);},[selected]);
-  useEffect(()=>{map.current?.fitBounds([[catalog.bounds[1],catalog.bounds[0]],[catalog.bounds[3],catalog.bounds[2]]],{padding:[28,28]});},[resetKey]);
-  return <div className="territory-map-shell"><div className="territory-map" ref={container} role="region" aria-label="Mapa de comercios y atractivos de Santa Bárbara, Huequecura y Ralco"/>{message&&<div className={`map-message ${available||places.some(p=>p.located)?'notice':''}`} role="status"><strong>{available?'Cobertura del mapa':'Mapa local pendiente'}</strong><p>{message}</p></div>}<div className="map-key" aria-label="Leyenda"><span><i className="key-business"/>Comercios</span><span><i className="key-interest"/>Atractivos</span>{catalog.station.configured&&<span><i className="key-station"/>Estás aquí</span>}</div></div>;
+  return <div className="territory-map-shell"><div className="territory-map" ref={container} role="region" aria-label="Mapa de comercios y atractivos de Santa Bárbara, Huequecura y Ralco"/>{message&&<div className={`map-message ${available||places.some(p=>p.located)?'notice':''}`} role="status"><strong>{available?'Cobertura del mapa':'Mapa local pendiente'}</strong><p>{message}</p></div>}<div className="map-key" aria-label="Leyenda"><span><i className="key-business"/>Comercios</span><span><i className="key-interest"/>Atractivos</span>{catalog.station.configured&&<span><i className="key-station"/>Usted está aquí</span>}</div></div>;
 }

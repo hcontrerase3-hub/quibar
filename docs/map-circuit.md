@@ -2,7 +2,9 @@
 
 ## Experiencia
 
-El mapa es la pantalla inicial. Los filtros distinguen sector turístico y tipo de lugar; la comuna administrativa se conserva por separado (incluido Alto Biobío). Quilaco permanece en la base histórica y el API anterior, fuera del circuito principal. Una ficha puede consultarse sin ubicación, pero solo las coordenadas verificadas de lugares reales aparecen como puntos y permiten calcular rutas.
+El mapa es la pantalla inicial. Los filtros distinguen sector turístico y tipo de lugar; la comuna administrativa se conserva por separado (incluido Alto Biobío). Quilaco permanece en la base histórica y el API anterior, fuera del circuito principal. Una ficha puede consultarse sin ubicación. Las fichas aprobadas de categorías activas aparecen como puntos y permiten calcular rutas cuando tienen coordenadas dentro del circuito, fuente y ubicación confirmada. Esto incluye las fichas ficticias, identificadas como ubicaciones de demostración; los recorridos y narraciones que las incluyen indican que contienen lugares ficticios.
+
+La vista inicial se centra en el tótem configurado y muestra un radio aproximado de 5 km, con la etiqueta permanente **Usted está aquí**. **Volver al inicio** y el reinicio por inactividad recuperan esta vista; **Ver circuito** muestra toda la zona. Sin tótem configurado se muestra el circuito completo. Las actualizaciones del catálogo respetan el encuadre elegido y una ruta calculada encuadra su trazado.
 
 Selecciona un destino y pulsa **Cómo llegar**. Elige caminar o conducir; las indicaciones, distancia y tiempo estimado proceden de Valhalla local, sin tráfico en tiempo real. Quíbar comprueba hasta diez candidatos próximos al trazado y propone como máximo tres paradas, con diversidad de categorías. El desvío máximo por parada es 5 minutos a pie o 10 en vehículo, ajustable mediante `QUIBAR_WALK_DETOUR_MIN` y `QUIBAR_DRIVE_DETOUR_MIN`.
 
@@ -10,9 +12,25 @@ Una sugerencia no modifica el recorrido: **Añadir parada** confirma el cambio. 
 
 La presentación básica es inmediata. Ollama puede mejorar el texto desde el servidor privado del cliente sin decidir caminos ni incorporar lugares no aprobados. **Escuchar a Quíbar** solicita voz local; no se reproduce automáticamente. Cambiar de recorrido o volver al inicio detiene el audio. La sesión se restablece después de 60 segundos sin interacción.
 
+## Lote explícito de 50 lugares ficticios
+
+`python -m backend.cli demo-points prepare --roads RUTAS.geojson --places LOCALIDADES.geojson --output MANIFIESTO.json` prepara 30 comercios y 20 atractivos sobre vértices de caminos OSM locales. Usa las capas `roads.geojson` y `places.geojson` de `.quibar/cartography/layers/`, los centros OSM de Santa Bárbara y Ralco y el entorno del tótem configurado para Huequecura. Requiere acceso HTTP al catálogo y a Valhalla; `--public-url` y `--routing-url` permiten indicar sus direcciones. El manifiesto incluye procedencia, hashes de las capas y las comprobaciones de conexión a pie y en vehículo. No modifica el catálogo ni reemplaza un manifiesto existente.
+
+El lote `circuit-v1` contiene 10 comercios por sector y 7, 7 y 6 atractivos en Santa Bárbara, Huequecura y Ralco, respectivamente. Cada punto está separado al menos 250 m de los demás y se conecta al tótem manteniendo el límite de búsqueda vial de 100 m. Los nombres, servicios y horarios son ficticios; la comprobación es técnica, sin verificación de acceso en terreno.
+
+Antes de migrar o cargar, ejecutar `./quibar respaldo backups/antes-demo-circuit-v1.tar.gz`. Con la imagen actualizada y el manifiesto guardado en `.quibar/demo-points/circuit-v1.json`, ejecutar desde el repositorio:
+
+```bash
+docker compose --project-name quibar --env-file .quibar/production.env -f compose.yaml exec -T app python -m backend.cli demo-points load /dev/stdin --admin-id ID < .quibar/demo-points/circuit-v1.json
+```
+
+Sustituir `ID` por el identificador de un administrador activo. La carga comprueba nuevamente ambas modalidades, registra auditoría y confirma las 50 altas en una transacción. Repetirla omite los registros existentes y conserva las ediciones manuales. No reactiva registros suspendidos y no se ejecuta al iniciar el equipo.
+
+Para retirar el lote de la vista pública sin borrarlo, usar el mismo comando cambiando `load` por `suspend`. Solo afecta a sus identificadores estables; si algún registro dejó de estar marcado como ficticio, la operación se cancela sin cambios. Conservar el manifiesto fuera del control de versiones. La ubicación del tótem y las fichas previas no forman parte del lote.
+
 ## Preparar una instalación real
 
-No se incluyen ubicaciones ficticias en el mapa ni datos viales de demostración en producción. La semilla comercial conserva sus ocho fichas ficticias; las del circuito se identifican como ejemplos en la lista. Para operar se necesitan los siguientes datos, verificados por el equipo territorial:
+La semilla comercial conserva sus ocho fichas ficticias sin asignarles coordenadas automáticamente. Para mostrar una en una presentación, elegir su punto desde el panel de administración, completar sector y fuente, confirmar la ubicación y guardar con estado **Aprobado**, conservando **Datos ficticios de demostración**. Las coordenadas guardadas se usan para el marcador y las rutas; estas siguen requiriendo un tótem configurado y el motor vial local. Para una instalación real, suspender las fichas de ejemplo que no deban publicarse. No se instalan datos viales sintéticos en producción. Para operar se necesitan los siguientes datos, verificados por el equipo territorial:
 
 1. Iniciar con `./quibar iniciar` (Windows: `quibar.cmd iniciar`) y crear el administrador con `./quibar admin` si falta. Para conservar una instalación nativa, importar sus datos antes del primer inicio, siguiendo `docs/docker.md`.
 2. En **Administración → Atractivos y tótem**, registrar la ubicación física del equipo, su fuente y la confirmación de verificación. Debe estar dentro del circuito.
@@ -25,6 +43,8 @@ No se incluyen ubicaciones ficticias en el mapa ni datos viales de demostración
 El mapa raster y el grafo vial son paquetes distintos. Instalar un MBTiles no instala rutas; importar un PBF no genera el mapa visual. La cobertura visual inicial es un encuadre del circuito, no la ubicación de un establecimiento. Las coordenadas exactas del tótem y de cada lugar requieren verificación propia. La extracción y el paquete raster deben acompañarse de procedencia, fecha y atribución; no se declaran preparados cuando no están instalados.
 
 Los servicios principales arrancan aunque falten cartografía, grafo, voz u Ollama. Sin mapa se muestra un aviso y la lista; sin origen verificado no se solicita una ruta; sin camino válido se informa la limitación y no se dibuja una línea recta como carretera.
+
+El motor busca caminos aptos a un máximo de 100 m de cada punto, también para fichas ficticias. Si no encuentra uno, el aviso pide revisar la ubicación del tótem y los accesos al destino o las paradas. Confirmar un marcador en el mapa no confirma su acceso vial; corregir manualmente el punto a un acceso comprobado cuando corresponda, sin ampliar automáticamente el límite de búsqueda.
 
 ## Generar los archivos con Docker
 

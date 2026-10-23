@@ -53,7 +53,7 @@ class StackAcceptance(unittest.TestCase):
         self.assertEqual(len(approved()), 8)
         with closing(sqlite3.connect(os.environ["QUIBAR_DB_PATH"])) as db, db:
             self.assertEqual(db.execute("PRAGMA journal_mode").fetchone()[0], "wal")
-            self.assertEqual(db.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0003_territory")
+            self.assertEqual(db.execute("SELECT version_num FROM alembic_version").fetchone()[0], "0004_demo_interests")
         self.assertNotIn("tax_id", self.client.get("/api/quibar/catalog").json()[0])
 
     def test_auth_network_csrf_logout_and_throttle(self):

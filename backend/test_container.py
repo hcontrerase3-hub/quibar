@@ -41,7 +41,7 @@ class ContainerData(unittest.TestCase):
             container_ops.import_data(self.source)
             with closing(sqlite3.connect(self.state / 'quibar.sqlite3')) as imported:
                 self.assertEqual(imported.execute('SELECT value FROM preserved').fetchone()[0], 'dato original')
-                self.assertEqual(imported.execute('SELECT version_num FROM alembic_version').fetchone()[0], '0003_territory')
+                self.assertEqual(imported.execute('SELECT version_num FROM alembic_version').fetchone()[0], '0004_demo_interests')
             with closing(sqlite3.connect(self.state / 'pre-migration.sqlite3')) as before:
                 self.assertFalse(before.execute("SELECT name FROM sqlite_master WHERE name='alembic_version'").fetchall())
             self.assertEqual((self.state / 'media/photo.webp').read_bytes(), b'photo')
