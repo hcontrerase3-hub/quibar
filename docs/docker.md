@@ -8,6 +8,8 @@ Docker Desktop (contenedores Linux) en macOS/Windows, o Docker Engine y Compose 
 
 La configuración está en `.quibar/production.env` (plantilla: `docker.env.example`). Nunca se ejecuta como código ni reemplaza `.env`. Tras cambiarla, ejecutar de nuevo `iniciar`. Los contenedores reinician con Docker; Docker Desktop debe estar iniciado en el equipo.
 
+Si la red de Docker se solapa con una red del equipo, configura `QUIBAR_SUBNET` en `.quibar/production.env` con un rango privado libre en formato CIDR. Para aplicar el cambio a una instalación existente, ejecuta `docker compose -p quibar --env-file .quibar/production.env -f compose.yaml --profile '*' down` y luego `./quibar iniciar`. Ese comando conserva los volúmenes. Si configuras también desarrollo, usa un rango distinto en `.quibar/development.env`.
+
 ## Servicios y límites de acceso
 
 - `app`: FastAPI no privilegiado (UID 10001), SQLite WAL, fotos y mapa en `state`.

@@ -92,6 +92,12 @@ services:
     <<: *app
     profiles: [tools]
     command: [python, -m, backend.cli, --help]
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${QUIBAR_SUBNET:-}
+
 volumes:
   state:
   socket:
