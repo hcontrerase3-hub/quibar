@@ -1,5 +1,5 @@
 export const sectors = ['Santa Bárbara', 'Huequecura', 'Ralco'] as const;
-export type Place = { key: string; id: string; kind: 'business' | 'interest'; name: string; category: string; commune: string; sector: string; summary: string; description: string; latitude: number | null; longitude: number | null; located: boolean; demo: boolean; hours: string; area: string; access?: string; whatsapp?: string; photos: {url: string; alt: string}[] };
+export type Place = { key: string; id: string; kind: 'business' | 'interest'; name: string; category: string; visual?: string; logo_url?: string | null; commune: string; sector: string; summary: string; description: string; latitude: number | null; longitude: number | null; located: boolean; demo: boolean; hours: string; area: string; access?: string; whatsapp?: string; photos: {url: string; alt: string}[] };
 export type Station = {name: string; configured: boolean; latitude: number | null; longitude: number | null};
 export type Catalog = {places: Place[]; sectors: string[]; bounds: number[]; station: Station};
 export type RouteRequest = {destination: string; profile: 'walking' | 'driving'; stops: string[]};

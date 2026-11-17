@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Catalog, Place, Route } from './map-types';
+import { placeIconSvg } from './place-icons';
+
+const escapeAttr = (value: string) => value.replace(/[&"'<>]/g, ch => ({ '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' }[ch] ?? ch));
 type Props = { catalog: Catalog; places: Place[]; selected: string | null; route: Route | null; suggested: string[]; resetKey: number; view: 'nearby' | 'circuit'; onSelect: (place: Place) => void };
 export default function TerritoryMap({catalog, places, selected, route, suggested, resetKey, view, onSelect}: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -52,8 +55,9 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
       const first=group.items[0]; const count=group.items.length;
       const stop=route?.stops.findIndex(p=>p.key===first.key)??-1;
       const destination=route?.destination.key===first.key;
-      const label=count>1?String(count):destination?'D':stop>=0?String(stop+1):first.kind==='business'?'●':'◆';
-      const icon=L.divIcon({className:'place-marker-wrap',html:`<span class="place-marker ${count>1?'cluster':first.kind} ${first.key===selected?'selected':''} ${suggested.includes(first.key)?'suggested':''} ${destination||stop>=0?'on-route':''}">${label}</span>`,iconSize:[44,48],iconAnchor:[22,43]});
+      const hasLogo=count===1&&!destination&&stop<0&&Boolean(first.logo_url);
+      const content=count>1?String(count):destination?'D':stop>=0?String(stop+1):hasLogo?`<img class="place-marker-logo" src="${escapeAttr(first.logo_url!)}" alt="" />`:placeIconSvg(first);
+      const icon=L.divIcon({className:'place-marker-wrap',html:`<span class="place-marker ${count>1?'cluster':first.kind} ${first.key===selected?'selected':''} ${suggested.includes(first.key)?'suggested':''} ${destination||stop>=0?'on-route':''} ${hasLogo?'has-logo':''}">${content}</span>`,iconSize:[44,48],iconAnchor:[22,43]});
       const markerText=count>1?`${count} lugares${group.items.some(p=>p.demo)?' · incluye ubicaciones de demostración':''}`:`${first.name}${first.demo?first.kind==='business'?' · Ubicación de demostración · negocio ficticio':' · Ubicación de demostración · lugar ficticio':''}`;
       const marker=L.marker([first.latitude!,first.longitude!],{icon,title:markerText+(count>1?'. Toca para acercar':''),keyboard:true}).addTo(markers);
       const tooltip=document.createElement('span');tooltip.textContent=markerText;marker.bindTooltip(tooltip,{direction:'top',offset:[0,-30]});

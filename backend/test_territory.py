@@ -1,10 +1,12 @@
 """Circuito geográfico, aprobación y ubicación del tótem con datos sintéticos."""
+import io
 import os
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import select
 from .app import app
 from .db import initialize, session
@@ -15,7 +17,11 @@ from .security import create_user, _attempts
 class TerritoryAcceptance(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        self.env = patch.dict(os.environ, {'QUIBAR_DB_PATH': f'{self.tmp.name}/test.sqlite3', 'QUIBAR_ADMIN_NETWORKS': '127.0.0.0/8'})
+        self.env = patch.dict(os.environ, {
+            'QUIBAR_DB_PATH': f'{self.tmp.name}/test.sqlite3',
+            'QUIBAR_MEDIA_DIR': f'{self.tmp.name}/media',
+            'QUIBAR_ADMIN_NETWORKS': '127.0.0.0/8',
+        })
         self.env.start(); initialize(); _attempts.clear()
         create_user('admin@test.local', 'Admin', 'temporary-long-password')
         create_user('operator@test.local', 'Operator', 'temporary-long-password', 'Operador Territorial')
@@ -114,3 +120,28 @@ class TerritoryAcceptance(unittest.TestCase):
                     self.assertTrue(place['demo'])
                     self.assertEqual(place['located'], located)
                     self.assertEqual((place['latitude'], place['longitude']), (-37.74, -71.89) if located else (None, None))
+
+    def test_business_logo_upload_moderation_and_delete(self):
+        buf = io.BytesIO()
+        Image.new('RGBA', (64, 64), (23, 109, 96, 255)).save(buf, format='PNG')
+        buf.seek(0)
+        with session() as db:
+            row = db.scalar(select(Comercio).where(Comercio.public_id == 'fogones'))
+            row.sector = 'Santa Bárbara'; row.latitud = -37.67; row.longitud = -72.02
+            row.location_verified = True; row.location_source = 'Fixture sintético'
+            db.commit()
+        res = self.client.post('/api/quibar/admin/businesses/fogones/logo',
+                               files={'file': ('logo.png', buf.getvalue(), 'image/png')},
+                               headers=self.headers)
+        self.assertEqual(res.status_code, 201, res.text)
+        logo_url = res.json()['logo_url']
+        self.assertTrue(logo_url.startswith('/media/logos/'))
+        place = next(p for p in self.client.get('/api/quibar/places').json()['places'] if p['id'] == 'fogones')
+        self.assertEqual(place['logo_url'], logo_url)
+        img_res = self.client.get(logo_url)
+        self.assertEqual(img_res.status_code, 200)
+        self.assertEqual(img_res.headers['content-type'], 'image/webp')
+        del_res = self.client.delete('/api/quibar/admin/businesses/fogones/logo', headers=self.headers)
+        self.assertEqual(del_res.status_code, 200)
+        self.assertIsNone(del_res.json()['logo_url'])
+        self.assertEqual(self.client.get(logo_url).status_code, 404)

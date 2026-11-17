@@ -56,6 +56,7 @@ class Comercio(Base):
     ofertas: Mapped[list] = mapped_column(JSON, default=list)
     keywords: Mapped[str] = mapped_column(Text, default="")
     visual: Mapped[str] = mapped_column(default="shop")
+    logo_archivo: Mapped[str] = mapped_column(String(255), default="")
     fecha_registro: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     fecha_actualizacion: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
     comuna: Mapped[Comuna] = relationship(lazy="joined")

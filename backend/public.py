@@ -68,6 +68,24 @@ def tile(z: int, x: int, y: int):
     return Response(bytes(data[0]), media_type=media, headers={"Cache-Control": "public, max-age=86400"})
 
 
+@router.get("/media/logos/{filename}")
+def business_logo(filename: str, request: Request):
+    with session() as db:
+        row = db.scalar(select(Comercio).where(Comercio.logo_archivo == filename))
+        if not row:
+            raise HTTPException(404)
+        if row.estado_moderacion != "Aprobado" or not row.rubro.activo:
+            try:
+                identity(request)
+            except HTTPException:
+                raise HTTPException(404)
+        path = media_dir() / row.logo_archivo
+        if not path.is_file():
+            raise HTTPException(404)
+        # Revalidate moderation on every request; suspended logos must not remain cached.
+        return FileResponse(path, media_type="image/webp", headers={"Cache-Control": "no-store"})
+
+
 @router.get("/media/{filename}")
 def photograph(filename: str, request: Request):
     with session() as db:

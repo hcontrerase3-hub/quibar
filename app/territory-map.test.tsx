@@ -95,3 +95,20 @@ test("una ruta encuadra su trazado y lo mantiene al redimensionar", async () => 
   rerender(<TerritoryMap {...props} route={route} catalog={{ ...catalog, station: { ...catalog.station } }} />);
   expect(mocks.map.fitBounds).toHaveBeenCalledTimes(1);
 });
+
+test("cada categoría muestra un icono distinto y los comercios con logotipo lo priorizan", async () => {
+  const gastro = { key: "business:gastro", id: "gastro", kind: "business" as const, name: "Restaurante", category: "Gastronomía", visual: "food", commune: "Santa Bárbara", sector: "Santa Bárbara", summary: "", description: "", latitude: -37.71, longitude: -71.81, located: true, demo: false, hours: "", area: "", photos: [] };
+  const mirador = { key: "interest:mirador", id: "mirador", kind: "interest" as const, name: "Mirador Alto", category: "Mirador", commune: "Santa Bárbara", sector: "Santa Bárbara", summary: "", description: "", latitude: -37.72, longitude: -71.82, located: true, demo: false, hours: "", area: "", photos: [] };
+  const withLogo = { ...gastro, key: "business:logo", id: "logo", name: "Marca Local", logo_url: "/media/logos/demo.webp", latitude: -37.73, longitude: -71.83 };
+  const markerSpy = vi.mocked(L.marker);
+  render(<TerritoryMap {...props} places={[gastro, mirador, withLogo]} />);
+  await waitFor(() => expect(mocks.map.setMaxZoom).toHaveBeenCalled());
+  const htmls = markerSpy.mock.calls.map(call => (call[1]?.icon as L.DivIcon | undefined)?.options?.html);
+  const placeHtmls = htmls.filter((h): h is string => typeof h === "string" && h.includes("place-marker"));
+  expect(placeHtmls).toHaveLength(3);
+  expect(placeHtmls[0]).toContain("<svg");
+  expect(placeHtmls[1]).toContain("<svg");
+  expect(placeHtmls[0]).not.toBe(placeHtmls[1]);
+  expect(placeHtmls[2]).toContain("has-logo");
+  expect(placeHtmls[2]).toContain('<img class="place-marker-logo" src="/media/logos/demo.webp"');
+});

@@ -10,14 +10,14 @@ type Business = {
   sector?: string; location_source?: string; location_verified?: boolean; id?: string; name: string; category: string; commune: string; area: string; summary: string;
   description: string; offerings: string[]; hours: string; keywords: string; visual: string;
   status: "Pendiente" | "Aprobado" | "Suspendido"; latitude: number | null; longitude: number | null;
-  whatsapp: string; legal_name: string; tax_id: string; featured: boolean; demo: boolean; photos: Photo[];
+  whatsapp: string; legal_name: string; tax_id: string; featured: boolean; demo: boolean; logo_url?: string | null; photos: Photo[];
 };
 type User = { id?: number; name: string; email: string; role: string; active: boolean; password?: string };
 type Audit = { id: number; user_id: number; action: string; at: string; detail: object };
 type Metric = { event: string; count: number; average_ms: number | null };
 const blank: Business = { name: "", category: "Gastronomía", commune: "Santa Bárbara", sector: "Santa Bárbara", location_source: "", location_verified: false, area: "", summary: "", description: "",
   offerings: [""], hours: "", keywords: "", visual: "shop", status: "Pendiente", latitude: null, longitude: null,
-  whatsapp: "", legal_name: "", tax_id: "", featured: false, demo: false, photos: [] };
+  whatsapp: "", legal_name: "", tax_id: "", featured: false, demo: false, logo_url: null, photos: [] };
 const blankUser: User = { name: "", email: "", role: "Operador Territorial", active: true, password: "" };
 
 type FieldIssue = { control: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement; label: string; message: string };
@@ -204,6 +204,16 @@ export default function Admin() {
         <label>Icono de referencia<select value={draft.visual} onChange={e => edit("visual", e.target.value)}>{Object.entries({ stay: "Alojamiento", food: "Comida", craft: "Artesanía", outdoors: "Naturaleza", coffee: "Café", shop: "Comercio", camp: "Camping", textile: "Tejidos" }).map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
         <label className="admin-check"><input type="checkbox" checked={draft.featured} onChange={e => edit("featured", e.target.checked)} />Destacar ficha</label><label className="admin-check"><input type="checkbox" checked={draft.demo} onChange={e => edit("demo", e.target.checked)} />Datos ficticios de demostración</label>
       </div><p className="admin-hint">Una ficha real requiere ubicación y contacto verificados para ser aprobada. Los operadores territoriales guardan sus cambios como pendientes de revisión.</p></fieldset></form>
+      <section className="admin-photos"><h3>Logotipo del comercio</h3><p>Opcional. Si se carga, se muestra como distintivo del punto en el mapa y en la ficha pública (JPEG, PNG o WebP).</p>
+        {!draft.id ? <p>Guarda la ficha antes de añadir un logotipo.</p> : <div className="admin-logo-row">
+          {draft.logo_url && <img className="admin-business-logo" src={draft.logo_url} alt={`Logotipo de ${draft.name}`} />}
+          <label className="admin-upload">{draft.logo_url ? "Cambiar logotipo" : "Subir logotipo"}<input disabled={busy} type="file" accept="image/jpeg,image/png,image/webp" onChange={e => {
+            const file = e.target.files?.[0]; if (!file) return; const body = new FormData(); body.append("file", file); e.target.value = "";
+            run(async () => { const result = await api<Business>(`/businesses/${draft.id}/logo`, { method: "POST", body }); setDraft(result); setRows(await api<Business[]>("/businesses")); setNotice("Logotipo actualizado."); });
+          }} /></label>
+          {draft.logo_url && <button type="button" disabled={busy} onClick={() => run(async () => { const result = await api<Business>(`/businesses/${draft.id}/logo`, { method: "DELETE" }); setDraft(result); setRows(await api<Business[]>("/businesses")); setNotice("Logotipo eliminado."); })}>Eliminar logotipo</button>}
+        </div>}
+      </section>
       <section className="admin-photos"><h3>Fotografías</h3><p>Hasta 8 imágenes. Se optimizan a WebP y se eliminan los metadatos de origen.</p>
         {!draft.id ? <p>Guarda la ficha antes de añadir fotografías.</p> : <label className="admin-upload">Añadir fotografía<input disabled={busy} type="file" accept="image/jpeg,image/png,image/webp" onChange={e => {
           const file = e.target.files?.[0]; if (!file) return; const body = new FormData(); body.append("file", file); e.target.value = "";

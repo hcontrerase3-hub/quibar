@@ -1,4 +1,4 @@
-import { BedDouble, Coffee, Mountain, Palette, ShoppingBag, Tent, UtensilsCrossed } from "lucide-react";
+import { BedDouble, Coffee, Mountain, Palette, Scissors, ShoppingBag, Tent, UtensilsCrossed } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type Category = "Alojamiento" | "Gastronomía" | "Artesanía" | "Turismo" | "Comercio";
@@ -8,12 +8,13 @@ export type Business = {
   summary: string; description: string; offerings: string[]; hours: string;
   keywords: string; visual: string; icon: LucideIcon; status: "Aprobado"; demo: boolean;
   latitude: number | null; longitude: number | null; whatsapp: string; featured: boolean;
+  logo_url?: string | null;
   photos: { id: number; url: string; alt: string; cover: boolean; order: number }[];
 };
 
 const visualIcons: Record<string, LucideIcon> = {
   stay: BedDouble, food: UtensilsCrossed, craft: Palette, outdoors: Mountain,
-  coffee: Coffee, shop: ShoppingBag, camp: Tent, textile: Palette,
+  coffee: Coffee, shop: ShoppingBag, camp: Tent, textile: Scissors,
 };
 
 export function asBusiness(item: Omit<Business, "icon">): Business {

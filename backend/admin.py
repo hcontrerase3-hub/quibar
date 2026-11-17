@@ -181,6 +181,29 @@ def update_business(public_id: str, data: BusinessData, request: Request, user=D
         return serialize(row, True)
 
 
+def save_webp_image(file: UploadFile, max_size: tuple[int, int], keep_alpha: bool = False, quality: int = 85) -> str:
+    content = file.file.read(8 * 1024 * 1024 + 1)
+    if len(content) > 8 * 1024 * 1024:
+        raise HTTPException(413, "La imagen supera los 8 MB")
+    filename = f"{uuid.uuid4().hex}.webp"
+    target = media_dir() / filename
+    try:
+        image = Image.open(io.BytesIO(content))
+        if image.format not in {"JPEG", "PNG", "WEBP"}:
+            raise HTTPException(422, "Usa una imagen JPEG, PNG o WebP")
+        if image.width * image.height > 20_000_000:
+            raise HTTPException(422, "La imagen supera los 20 megapíxeles")
+        image.load()
+        image = ImageOps.exif_transpose(image)
+        mode = "RGBA" if keep_alpha and ("A" in image.getbands() or image.mode in ("LA", "P")) else "RGB"
+        image = image.convert(mode)
+        image.thumbnail(max_size)
+        image.save(target, "WEBP", quality=quality)
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
+        raise HTTPException(422, "La imagen no es válida")
+    return filename
+
+
 @router.post("/businesses/{public_id}/photos", status_code=201)
 def upload_photo(public_id: str, request: Request, file: UploadFile, user=Depends(identity)):
     with session() as db:
@@ -189,23 +212,8 @@ def upload_photo(public_id: str, request: Request, file: UploadFile, user=Depend
             row.estado_moderacion = "Pendiente"
         if len(row.fotos) >= 8:
             raise HTTPException(422, "Máximo ocho fotografías por ficha")
-        content = file.file.read(8 * 1024 * 1024 + 1)
-        if len(content) > 8 * 1024 * 1024:
-            raise HTTPException(413, "La imagen supera los 8 MB")
-        filename = f"{uuid.uuid4().hex}.webp"
+        filename = save_webp_image(file, (1600, 1600))
         target = media_dir() / filename
-        try:
-            image = Image.open(io.BytesIO(content))
-            if image.format not in {"JPEG", "PNG", "WEBP"}:
-                raise HTTPException(422, "Usa una imagen JPEG, PNG o WebP")
-            if image.width * image.height > 20_000_000:
-                raise HTTPException(422, "La imagen supera los 20 megapíxeles")
-            image.load()
-            image = ImageOps.exif_transpose(image).convert("RGB")
-            image.thumbnail((1600, 1600))
-            image.save(target, "WEBP", quality=85)
-        except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-            raise HTTPException(422, "La imagen no es válida")
         try:
             row.fotos.append(Fotografia(ruta_archivo=filename, orden=len(row.fotos) + 1,
                                         es_portada=not row.fotos, texto_alt=row.nombre_fantasia))
@@ -214,6 +222,42 @@ def upload_photo(public_id: str, request: Request, file: UploadFile, user=Depend
         except Exception:
             target.unlink(missing_ok=True)
             raise
+        return serialize(row, True)
+
+
+@router.post("/businesses/{public_id}/logo", status_code=201)
+def upload_logo(public_id: str, request: Request, file: UploadFile, user=Depends(identity)):
+    with session() as db:
+        row = find_business(db, public_id)
+        if user["role"] != "Administrador":
+            row.estado_moderacion = "Pendiente"
+        filename = save_webp_image(file, (512, 512), keep_alpha=True, quality=90)
+        target = media_dir() / filename
+        previous = row.logo_archivo
+        try:
+            row.logo_archivo = filename
+            audit(db, user, request, "ACTUALIZAR_LOGO", row, {"file": filename})
+            db.commit()
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
+        if previous and previous != filename:
+            (media_dir() / previous).unlink(missing_ok=True)
+        return serialize(row, True)
+
+
+@router.delete("/businesses/{public_id}/logo")
+def delete_logo(public_id: str, request: Request, user=Depends(identity)):
+    with session() as db:
+        row = find_business(db, public_id)
+        if row.logo_archivo:
+            if user["role"] != "Administrador":
+                row.estado_moderacion = "Pendiente"
+            previous = row.logo_archivo
+            row.logo_archivo = ""
+            audit(db, user, request, "ELIMINAR_LOGO", row, {"file": previous})
+            db.commit()
+            (media_dir() / previous).unlink(missing_ok=True)
         return serialize(row, True)
 
 
