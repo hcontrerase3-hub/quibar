@@ -10,3 +10,12 @@
 .place-detail .place-category{margin:0 0 13px}.place-detail h2{margin-top:16px}.route-suggestion h4{margin-top:0}
 .territory-map-shell{display:flex;flex-direction:column}.territory-map-shell>.territory-map{position:relative;flex:1;min-height:0}.map-message.notice{position:static;order:-1;transform:none;width:auto;border-radius:0;padding:8px 14px;box-shadow:none;border-bottom:1px solid #d7e0d5}.map-message.notice p{margin:3px 0 0;font-size:12px;line-height:1.4}
 .map-canvas:has(.map-message.notice) .map-overview{top:100px}
+.map-weather{position:absolute;right:20px;top:20px;z-index:410;display:flex;align-items:center;gap:9px;background:#fffffff2;color:#163f3a;border:1px solid #dbe4dc;border-radius:9px;padding:7px 12px;box-shadow:0 4px 16px #183c3420;pointer-events:none;max-width:220px}
+.map-weather-icon{color:#176d60;flex-shrink:0;display:grid;place-items:center}
+.map-weather-body{min-width:0;line-height:1.25}
+.map-weather-main{display:flex;align-items:baseline;gap:6px}
+.map-weather-main strong{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.map-weather-main span{font-size:12px;font-weight:600;color:#215f51;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-weather-meta{font-size:11px;color:#4e6c61;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.map-canvas:has(.map-message.notice) .map-weather{top:100px}
+@media(max-width:750px){.map-weather{right:14px;top:14px;padding:6px 10px;max-width:175px}}

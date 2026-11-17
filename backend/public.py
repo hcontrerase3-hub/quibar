@@ -4,9 +4,11 @@ import os
 import html
 import math
 import sqlite3
+import time
 from pathlib import Path
 from typing import Literal
 
+import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
@@ -120,3 +122,103 @@ def record_metric(data: EventData):
         db.add(Metrica(id_comercio=row.id if row else None, tipo_evento=data.event))
         db.commit()
     return {"ok": True}
+
+
+_WEATHER_TTL_SECONDS = 600
+_WEATHER_DEFAULT_LAT = -37.7106
+_WEATHER_DEFAULT_LON = -71.8155
+_WEATHER_DEFAULT_LABEL = "Los Nogales, Santa Bárbara"
+_weather_cache: dict[tuple[float, float], tuple[float, dict[str, object]]] = {}
+
+_WMO_CONDITIONS = {
+    0: "Despejado",
+    1: "Parcialmente nublado",
+    2: "Parcialmente nublado",
+    3: "Nublado",
+    45: "Niebla",
+    48: "Niebla",
+    51: "Llovizna",
+    53: "Llovizna",
+    55: "Llovizna",
+    56: "Llovizna",
+    57: "Llovizna",
+    61: "Lluvia",
+    63: "Lluvia",
+    65: "Lluvia",
+    66: "Lluvia",
+    67: "Lluvia",
+    71: "Nieve",
+    73: "Nieve",
+    75: "Nieve",
+    77: "Nieve",
+    80: "Lluvia",
+    81: "Lluvia",
+    82: "Lluvia",
+    85: "Nieve",
+    86: "Nieve",
+    95: "Tormenta",
+    96: "Tormenta",
+    99: "Tormenta",
+}
+
+
+def weather_coordinates() -> tuple[float, float, str]:
+    """Devuelve latitud, longitud y etiqueta para consultar el clima en Open-Meteo."""
+    from .territory import station
+
+    label = os.environ.get("QUIBAR_WEATHER_LABEL", _WEATHER_DEFAULT_LABEL).strip() or _WEATHER_DEFAULT_LABEL
+    env_lat = os.environ.get("QUIBAR_WEATHER_LATITUDE")
+    env_lon = os.environ.get("QUIBAR_WEATHER_LONGITUDE")
+    if env_lat and env_lon:
+        try:
+            return float(env_lat), float(env_lon), label
+        except ValueError:
+            pass
+    totem = station()
+    if totem["configured"] and totem["latitude"] is not None and totem["longitude"] is not None:
+        return round(float(totem["latitude"]), 4), round(float(totem["longitude"]), 4), label
+    return _WEATHER_DEFAULT_LAT, _WEATHER_DEFAULT_LON, label
+
+
+@router.get("/api/quibar/weather")
+async def current_weather():
+    """Consulta el clima actual en Open-Meteo para el Centro de Visitantes con caché breve."""
+    latitude, longitude, label = weather_coordinates()
+    cache_key = (latitude, longitude)
+    now = time.monotonic()
+    cached = _weather_cache.get(cache_key)
+    if cached and now - cached[0] < _WEATHER_TTL_SECONDS:
+        return cached[1]
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,relative_humidity_2m,weather_code",
+        "timezone": "America/Santiago",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(
+                "https://api.open-meteo.com/v1/forecast",
+                params=params,
+                headers={"Accept": "application/json"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        current = payload.get("current") if isinstance(payload, dict) else None
+        if not isinstance(current, dict) or current.get("temperature_2m") is None:
+            return {"available": False}
+        code = current.get("weather_code")
+        condition = _WMO_CONDITIONS.get(int(code), "Clima actual") if code is not None else "Clima actual"
+        humidity = current.get("relative_humidity_2m")
+        result: dict[str, object] = {
+            "available": True,
+            "city": label,
+            "temperature": str(current["temperature_2m"]),
+            "condition": condition,
+            "humidity": str(round(float(humidity))) if humidity is not None else "",
+            "updated_at": str(current.get("time") or ""),
+        }
+        _weather_cache[cache_key] = (now, result)
+        return result
+    except (httpx.HTTPError, ValueError, TypeError):
+        return {"available": False}

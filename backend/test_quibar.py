@@ -214,6 +214,46 @@ class QuibarAcceptance(unittest.TestCase):
                 transport=httpx.MockTransport(out_of_memory), **kwargs)):
             self.assertEqual(preload_model(), 1)
 
+    def test_weather_endpoint_proxies_open_meteo_and_handles_outages(self):
+        from . import public
+
+        public._weather_cache.clear()
+        calls = []
+        real_client = httpx.AsyncClient
+
+        def open_meteo_transport(request):
+            calls.append(str(request.url))
+            return httpx.Response(200, json={
+                "current": {
+                    "time": "2026-11-17T19:15",
+                    "temperature_2m": 19.2,
+                    "relative_humidity_2m": 62,
+                    "weather_code": 0,
+                },
+            })
+
+        with patch("backend.public.httpx.AsyncClient", side_effect=lambda **kwargs: real_client(
+                transport=httpx.MockTransport(open_meteo_transport), **kwargs)):
+            first = self.client.get("/api/quibar/weather")
+            second = self.client.get("/api/quibar/weather")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(first.json()["available"], True)
+        self.assertEqual(first.json()["temperature"], "19.2")
+        self.assertEqual(first.json()["city"], "Los Nogales, Santa Bárbara")
+        self.assertEqual(first.json()["humidity"], "62")
+        self.assertEqual(second.json()["condition"], "Despejado")
+        self.assertEqual(len(calls), 1)
+        self.assertIn("api.open-meteo.com/v1/forecast", calls[0])
+        self.assertIn("latitude=-37.7106", calls[0])
+        self.assertIn("longitude=-71.8155", calls[0])
+
+        public._weather_cache.clear()
+        with patch("backend.public.httpx.AsyncClient", side_effect=httpx.ConnectError("Sin red")):
+            offline = self.client.get("/api/quibar/weather")
+        self.assertEqual(offline.status_code, 200)
+        self.assertEqual(offline.json(), {"available": False})
+
 
 if __name__ == "__main__":
     unittest.main()
