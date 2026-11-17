@@ -100,6 +100,7 @@ export default function AdminLocationPicker(props: Props) {
   }, [ready, props.latitude, props.longitude, props.disabled]);
 
   return <div className="admin-location-picker wide">
+    <svg width="0" height="0" aria-hidden="true" style={{ position: "absolute", pointerEvents: "none" }}><defs><filter id="quibar-green-base" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values="1 -0.75 0.75 0 0 0 1.22 -0.22 0 0 0 0.15 0.85 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues="0 0.1 0.2 0.3 0.4 0.5 0.58 0.67 0.82 0.96 1"/></feComponentTransfer></filter></defs></svg>
     <p><strong>Ubicación en el mapa</strong></p>
     <p id="admin-location-help">Pulsa el mapa para ubicar la tienda y arrastra el marcador para ajustar el punto. Las coordenadas se completan automáticamente; guarda la ficha para conservar el cambio.</p>
     <div ref={container} className="admin-location-map" role="region" aria-label="Elegir ubicación de la tienda" aria-describedby="admin-location-help" hidden={!ready} />

@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-test("la vista inicial centra un radio aproximado de 5 km en el tótem y deja su etiqueta visible", async () => {
+test("la vista inicial centra un radio aproximado de 500 m en el tótem y deja su etiqueta visible", async () => {
   render(<TerritoryMap {...props} />);
   await waitFor(() => expect(mocks.map.setMaxZoom).toHaveBeenCalled());
   const bounds = mocks.map.fitBounds.mock.lastCall![0] as L.LatLngBounds;
@@ -50,8 +50,8 @@ test("la vista inicial centra un radio aproximado de 5 km en el tótem y deja su
   expect(bounds.getCenter().lat).toBeCloseTo(station.lat, 6);
   expect(bounds.getCenter().lng).toBeCloseTo(station.lng, 6);
   const distance = station.distanceTo([bounds.getNorth(), station.lng]);
-  expect(distance).toBeGreaterThan(4900);
-  expect(distance).toBeLessThan(5100);
+  expect(distance).toBeGreaterThan(490);
+  expect(distance).toBeLessThan(510);
   expect(screen.getByText("Usted está aquí")).toBeTruthy();
   expect(mocks.marker.bindTooltip).toHaveBeenCalledWith("Usted está aquí", expect.objectContaining({ permanent: true }));
 });

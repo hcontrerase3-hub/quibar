@@ -34,7 +34,7 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
     if (!current) return;
     const station = catalog.station;
     const bounds = view === 'nearby' && station.configured && station.latitude != null && station.longitude != null
-      ? L.latLng(station.latitude, station.longitude).toBounds(10000)
+      ? L.latLng(station.latitude, station.longitude).toBounds(1000)
       : L.latLngBounds([[catalog.bounds[1], catalog.bounds[0]], [catalog.bounds[3], catalog.bounds[2]]]);
     current.fitBounds(bounds, { padding: [28, 28] });
   }, [resetKey, view, catalog.station.configured, catalog.station.latitude, catalog.station.longitude]);
@@ -63,5 +63,5 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
   },[places,selected,suggested,route,catalog.station,revision]);
   useEffect(()=>{const current=map.current;if(!current)return;routeLayer.current?.remove();routeLayer.current=null;if(route){routeLayer.current=L.geoJSON(route.geometry,{style:{color:'#126d65',weight:6,opacity:.9}}).addTo(current);current.fitBounds(routeLayer.current.getBounds(),{padding:[55,55],maxZoom:16});}},[route]);
   useEffect(()=>{const current=map.current;if(!current)return;const p=places.find(p=>p.key===selected);if(p?.located)current.panTo([p.latitude!,p.longitude!]);},[selected]);
-  return <div className="territory-map-shell"><div className="territory-map" ref={container} role="region" aria-label="Mapa de comercios y atractivos de Santa Bárbara, Huequecura y Ralco"/>{message&&<div className={`map-message ${available||places.some(p=>p.located)?'notice':''}`} role="status"><strong>{available?'Cobertura del mapa':'Mapa local pendiente'}</strong><p>{message}</p></div>}<div className="map-key" aria-label="Leyenda"><span><i className="key-business"/>Comercios</span><span><i className="key-interest"/>Atractivos</span>{catalog.station.configured&&<span><i className="key-station"/>Usted está aquí</span>}</div></div>;
+  return <div className="territory-map-shell"><svg width="0" height="0" aria-hidden="true" style={{position:'absolute',pointerEvents:'none'}}><defs><filter id="quibar-green-base" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values="1 -0.75 0.75 0 0 0 1.22 -0.22 0 0 0 0.15 0.85 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues="0 0.1 0.2 0.3 0.4 0.5 0.58 0.67 0.82 0.96 1"/></feComponentTransfer></filter></defs></svg><div className="territory-map" ref={container} role="region" aria-label="Mapa de comercios y atractivos de Santa Bárbara, Huequecura y Ralco"/>{message&&<div className={`map-message ${available||places.some(p=>p.located)?'notice':''}`} role="status"><strong>{available?'Cobertura del mapa':'Mapa local pendiente'}</strong><p>{message}</p></div>}<div className="map-key" aria-label="Leyenda"><span><i className="key-business"/>Comercios</span><span><i className="key-interest"/>Atractivos</span>{catalog.station.configured&&<span><i className="key-station"/>Usted está aquí</span>}</div></div>;
 }

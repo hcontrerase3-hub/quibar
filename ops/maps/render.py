@@ -62,8 +62,8 @@ def style(directory, zoom, map_style="classic", hillshade=None):
         layers.append(f'<Layer name="{name}" srs="{WGS84}"><StyleName>{name}</StyleName><Datasource><Parameter name="type">geojson</Parameter><Parameter name="file">{path}</Parameter></Datasource></Layer>')
     def rule(symbol, condition=None):
         return '<Rule>' + (f'<Filter>{escape(condition)}</Filter>' if condition else '') + symbol + '</Rule>'
-    add('land', 'land', rule(f'<PolygonSymbolizer fill="{"#e7d4ac" if atlas else "#ece9df"}"/>'))
-    add('forest', 'forest', rule(f'<PolygonSymbolizer fill="{"#b6c18e" if atlas else "#d5e3c8"}"/>'))
+    add('land', 'land', rule(f'<PolygonSymbolizer fill="{"#c4dbb0" if atlas else "#ece9df"}"/>'))
+    add('forest', 'forest', rule(f'<PolygonSymbolizer fill="{"#8dbb86" if atlas else "#d5e3c8"}"/>'))
     if atlas:
         if hillshade is None:
             raise ValueError('El atlas requiere relieve verificado (--hillshade).')
@@ -119,9 +119,9 @@ def style(directory, zoom, map_style="classic", hillshade=None):
         layers = layers[:label_index] + layers[-len(types):] + layers[label_index:-len(types)]
     xml = f'<Map srs="{MERCATOR}" background-color="#f1f0e5" buffer-size="64">' + ''.join(styles + layers) + '</Map>'
     if atlas:
-        for before, after in {'#f1f0e5': '#f0dfb6', '#aad2df': '#83b3b4', '#8ebfce': '#598e98',
-                              '#bbad96': '#765a39', '#fff5d5': '#fff0c6', '#fffefa': '#fff5d8',
-                              '#344a3c': '#4a3d2a', '#f7f7ee': '#fff3d4', '#d5c9b9': '#c3ab88', '#c2b7a8': '#917658'}.items():
+        for before, after in {'#f1f0e5': '#cfe3bc', '#aad2df': '#83b3b4', '#8ebfce': '#598e98',
+                              '#bbad96': '#5d613e', '#fff5d5': '#ecf9cc', '#fffefa': '#f6fbdc',
+                              '#344a3c': '#2f4532', '#f7f7ee': '#f4fae8', '#d5c9b9': '#b8c49e', '#c2b7a8': '#7f8c68'}.items():
             xml = xml.replace(before, after)
     return xml
 
