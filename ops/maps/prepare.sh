@@ -1,6 +1,13 @@
 #!/bin/bash
 # Explicit, reproducible data preparation; never downloads public OSM raster tiles.
 set -Eeuo pipefail
+style=classic
+if [[ $# -gt 0 ]]; then
+  [[ $# -eq 2 && "$1" == --style && ( "$2" == classic || "$2" == atlas ) ]] || {
+    echo 'Uso: ops/maps/prepare.sh [--style classic|atlas]' >&2; exit 2;
+  }
+  style="$2"
+fi
 cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.."
 command -v docker >/dev/null || { echo 'Se requiere Docker con Compose.' >&2; exit 1; }
 root=$(pwd -P)
@@ -26,11 +33,18 @@ if [[ ! -s "$work/circuit.geojson" ]]; then
   run osmium export /work/region.osm.pbf -o /work/circuit.part.geojson
   mv "$work/circuit.part.geojson" "$work/circuit.geojson"
 fi
-if [[ ! -s "$work/circuit.mbtiles" ]]; then
-  run python3 /scripts/render.py /work/circuit.geojson /work/circuit.mbtiles
+package=circuit.mbtiles
+render_args=()
+if [[ "$style" == atlas ]]; then
+  package=circuit-atlas.mbtiles
+  run python3 /scripts/relief.py /work/relief
+  render_args=(--style atlas --hillshade /work/relief/hillshade.tif)
 fi
-run python3 /scripts/provenance.py
+if [[ ! -s "$work/$package" ]]; then
+  run python3 /scripts/render.py /work/circuit.geojson "/work/$package" "${render_args[@]}"
+fi
+run python3 /scripts/provenance.py --package "$package"
 printf '%s\n' 'Archivos preparados en .quibar/cartography/. Para instalarlos:' \
-  './quibar importar-mapa .quibar/cartography/circuit.mbtiles' \
+  "./quibar importar-mapa .quibar/cartography/$package" \
   './quibar preparar-rutas .quibar/cartography/region.osm.pbf' \
   'Los archivos existentes se conservan. Para actualizar, archiva primero la carpeta.'

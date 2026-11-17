@@ -58,7 +58,40 @@ ops/maps/prepare.sh
 ./quibar logs routing
 ```
 
-La primera preparación descarga el PBF de Chile desde [Geofabrik](https://download.geofabrik.de/south-america/chile.html), comprueba su MD5 publicado y utiliza Osmium y Mapnik dentro de Docker. No requiere QGIS ni herramientas geográficas instaladas en el anfitrión. El recorte vial tiene margen para conexiones; las geometrías se conservan con la estrategia `complete_ways`. El mapa raster cubre el circuito en zoom 8–16, con una tesela adicional de margen por nivel, y representa calles, caminos, agua, vegetación, edificios y nombres existentes en OSM. Es un estilo simplificado, sin relieve ni imágenes satelitales; no certifica accesos ni incorpora comercios al catálogo.
+La primera preparación descarga el PBF de Chile desde [Geofabrik](https://download.geofabrik.de/south-america/chile.html), comprueba su MD5 publicado y utiliza Osmium y Mapnik dentro de Docker. No requiere QGIS ni herramientas geográficas instaladas en el anfitrión. El recorte vial tiene margen para conexiones; las geometrías se conservan con la estrategia `complete_ways`. El mapa raster cubre el circuito en zoom 8–16, con una tesela adicional de margen por nivel, y representa calles, caminos, agua, vegetación, edificios y nombres existentes en OSM. El estilo clásico es simplificado, sin relieve ni imágenes satelitales; no certifica accesos ni incorpora comercios al catálogo.
+
+### Atlas ilustrado con relieve real
+
+El estilo clásico sigue siendo el predeterminado. Para preparar el atlas sin reemplazarlo:
+
+```bash
+ops/maps/prepare.sh --style atlas
+```
+
+Se reutilizan las geometrías OSM y se genera `circuit-atlas.mbtiles`, con la misma cobertura y zoom 8–16. El atlas combina papel cálido con textura de fibras, agua azul con rayado de tinta, nombres de localidades en serif, caminos con bordes marcados y árboles dibujados de varios tipos, recortados a las áreas OSM de vegetación. El estilo `atlas-2` refuerza la ilustración y el contraste del relieve sin alterar las geometrías. Los símbolos son decorativos: no indican árboles individuales. Caminos, ríos, edificios, rutas y marcadores conservan sus coordenadas; el resultado no garantiza exactitud absoluta de las fuentes.
+
+El sombreado usa Copernicus DEM GLO-30 Public (edición 2021), un **modelo de superficie** con muestreo aproximado de 30 m que puede incluir vegetación y construcciones. No representa un levantamiento del suelo ni incorpora fallas geológicas. Se descargan GeoTIFF públicos desde el [repositorio Copernicus en AWS](https://registry.opendata.aws/copernicus-dem/) para toda la cobertura de teselas, incluido el margen de los niveles alejados. Por ello el área de elevaciones es mayor que el circuito. Las celdas ausentes tanto del índice GLO-30 como del índice global GLO-90 se tratan como océano a cota cero, según la documentación del proveedor; una celda terrestre presente solo en GLO-90 detiene la preparación y no se sustituye por terreno inventado. La primera preparación necesita conexión, varios GB libres y tiempo de procesamiento; la visualización posterior funciona sin conexión y no añade servicios al tótem.
+
+GDAL une las elevaciones, reproyecta a UTM 19S a 30 m, calcula iluminación desde 315° a 45° sin exageración vertical y reproyecta el sombreado a Web Mercator. Se verifica que no existan huecos en el raster final. Agua, caminos y nombres se dibujan sobre el relieve. No se dibujan montañas inventadas ni curvas de nivel.
+
+La carpeta `relief/` conserva fuentes, recibos SHA256, `hillshade.tif`, `relief.json`, licencia y avisos. `provenance-atlas.json` registra además la versión del estilo, parámetros, herramientas y hashes del paquete y de las elevaciones. Transferir ambos junto al MBTiles y conservar los avisos de licencia. El mapa incluye la atribución de Copernicus; el aviso de responsabilidad figura en la atribución, los metadatos y `relief/NOTICE.txt`.
+
+Si falta una descarga, hay un `.part`, un SHA256 incorrecto o elevaciones ausentes, la generación se detiene y conserva el mapa instalado. Archivar los archivos incompletos indicados por el error antes de reintentar. Para renovar fuentes, parámetros o la versión del estilo, archivar primero `relief/`, `circuit-atlas.mbtiles` y `provenance-atlas.json`; no se sobrescriben paquetes existentes.
+
+Después de verificar el atlas, instalarlo explícitamente:
+
+```bash
+./quibar respaldo
+./quibar importar-mapa .quibar/cartography/circuit-atlas.mbtiles --replace
+```
+
+Si no existe un mapa instalado, omitir `--replace`. El importador valida y cambia el mapa de forma atómica. No es necesario reconstruir el grafo de rutas. Después de importar, hacer una recarga completa del navegador (Ctrl+F5) para descartar las teselas anteriores guardadas en caché. Para volver al estilo anterior, importar el MBTiles previo conservado, usando el mismo procedimiento de respaldo y reemplazo.
+
+Las comprobaciones de geometría, cobertura, importación del estilo, integridad del MBTiles y fallos de preparación se ejecutan sin descargar datos:
+
+```bash
+docker run --rm -v "$PWD/ops/maps:/scripts:ro" quibar-cartography:local python3 /scripts/test_atlas.py -v
+```
 
 Los archivos y capas intermedias quedan en `.quibar/cartography/`, excluidos de Git. `provenance.json` conserva fuente, licencia ODbL, fecha de preparación, encabezado OSM y SHA256 de los paquetes. Conservarlo junto a los archivos al transferirlos a otro equipo. La preparación necesita conexión y espacio para la descarga, la imagen Docker y los datos generados; luego el mapa y las rutas funcionan localmente.
 
