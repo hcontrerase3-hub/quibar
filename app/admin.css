@@ -8,8 +8,8 @@
 .admin-shell button,.admin-login button{min-height:42px;padding:10px 18px;border:1px solid #CFD8E3;border-radius:999px;background:#FFFFFF;color:#3662B2;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s}
 .admin-shell button:hover,.admin-login button:hover{background:#EAF4FA;border-color:#00B2E6}
 .admin-shell button:disabled,.admin-login button:disabled{opacity:.5;cursor:wait}
-.admin-primary{background:linear-gradient(90deg,#1E70B6 0%,#007FA8 100%)!important;color:#FFFFFF!important;border-color:transparent!important}
-.admin-primary:hover{background:#165792!important}
+.admin-primary{background:var(--colbun-grad-btn)!important;color:#FFFFFF!important;border-color:transparent!important;box-shadow:var(--colbun-btn-shadow)}
+.admin-primary:hover{background:var(--colbun-btn-hover)!important}
 .admin-shell label,.admin-login label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#2B3036}
 .admin-login label{margin:18px 0}
 .admin-shell input,.admin-shell select,.admin-shell textarea,.admin-login input{padding:11px 13px;border:1px solid #CFD8E3;background:#FFFFFF;color:#2B3036;border-radius:10px;font:inherit;width:100%;min-width:0}

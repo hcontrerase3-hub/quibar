@@ -51,7 +51,6 @@ export default function Home(){
   async function ask(){const text=chatInput.trim();if(!text||chatBusy)return;chatAbort.current?.abort();const controller=new AbortController();chatAbort.current=controller;setPanelOpen(true);setPanelTab('chat');setMessages(m=>[...m,{role:'user',text,keys:[]}]);setChatInput('');setChatBusy(true);setKeyboard(null);const timeout=setTimeout(()=>controller.abort(),12000);try{const data=await json<{reply:string;matches:{id:string}[]}>('/chat',{query:text,scope:'circuit',context_ids:messages.at(-1)?.keys??[],history:messages.slice(-4).map(m=>({role:m.role,content:m.text.slice(0,300)}))},controller.signal);if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:data.reply,keys:data.matches.map(p=>p.id)}]);}catch{if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:'Puedes seguir explorando los lugares del mapa mientras recuperamos la conexión con Quíbar.',keys:[]}]);}finally{clearTimeout(timeout);if(chatAbort.current===controller)setChatBusy(false);}}
 
   return <main className="map-app">
-    <div className="colbun-ribbon" aria-hidden="true"/>
     <header className="map-header">
       <div className="map-heading">
         <h1>Explora con Quíbar</h1>
@@ -62,6 +61,7 @@ export default function Home(){
         <a href="/" className="map-brand" aria-label="Colbún inicio"><img src="/brand/colbun-imagotipo.svg" alt="Colbún, Transforma, Impulsa, Sueña" className="map-brand-logo"/></a>
       </div>
     </header>
+    <div className="colbun-ribbon" aria-hidden="true"/>
 
     <div className="explore-layout">
       <section className="map-workspace" aria-label="Explorar el circuito">
