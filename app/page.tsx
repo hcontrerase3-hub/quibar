@@ -1,19 +1,24 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Compass, Footprints, Car, List, MapPin, Navigation, Plus, RotateCcw, Search, Send, Sparkles, Square, Volume2, X, Delete } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Compass, Footprints, Car, List, MapPin, Navigation, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Search, Send, Sparkles, Square, Volume2, X, Delete } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Catalog, Place, Route, RouteRequest, Suggestion } from './map-types';
 import { minutes, routeUrl, sectors } from './map-types';
 import { placeIconComponent } from './place-icons';
+import { ColbunCoffeeIcon, ColbunMapIcon } from './colbun-icons';
 import { normalize } from './data';
 import { track } from '../lib/metrics';
 import WeatherCard from './weather-card';
 import './map-experience.css';
+
 const TerritoryMap = lazy(()=>import('./territory-map'));
 const initial:Catalog={places:[],sectors:[...sectors],bounds:[-72.2,-38.05,-71.35,-37.55],station:{name:'Tótem Quíbar',configured:false,latitude:null,longitude:null}};
 type Message={text:string;role:'assistant'|'user';keys:string[]};
+type PanelTab='places'|'route'|'chat';
+
 export default function Home(){
   const [catalog,setCatalog]=useState<Catalog>(initial),[ready,setReady]=useState(false),[error,setError]=useState('');
   const [sector,setSector]=useState('Todos'),[kind,setKind]=useState('Todos'),[query,setQuery]=useState(''),[list,setList]=useState(true);
+  const [panelOpen,setPanelOpen]=useState(true),[panelTab,setPanelTab]=useState<PanelTab>('places');
   const [selectedKey,setSelectedKey]=useState<string|null>(null),[profile,setProfile]=useState<'walking'|'driving'>('walking');
   const [route,setRoute]=useState<Route|null>(null),[request,setRequest]=useState<RouteRequest|null>(null),[suggestions,setSuggestions]=useState<Suggestion[]>([]);
   const [busy,setBusy]=useState(false),[suggesting,setSuggesting]=useState(false),[routeError,setRouteError]=useState(''),[narration,setNarration]=useState({text:'',id:'',mode:'basico'});
@@ -27,32 +32,203 @@ export default function Home(){
   const mapPlaces=useMemo(()=>{const keys=new Set([selectedKey,...suggestions.map(s=>s.place.key),...(route?.stops.map(p=>p.key)??[]),route?.destination.key]);return catalog.places.filter(p=>visible.includes(p)||keys.has(p.key));},[visible,catalog.places,selectedKey,suggestions,route]);
   const stopAudio=useCallback(()=>{voiceAbort.current?.abort();voiceAbort.current=null;audio.current?.pause();audio.current=null;if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);audioUrl.current='';setSpeaking(false);},[]);
   const clearRoute=useCallback(()=>{routeAbort.current?.abort();routeAbort.current=null;stopAudio();setRoute(null);setRequest(null);setSuggestions([]);setNarration({text:'',id:'',mode:'basico'});setRouteError('');setBusy(false);setSuggesting(false);setQr(false);setVoiceError('');},[stopAudio]);
-  const reset=useCallback(()=>{clearRoute();chatAbort.current?.abort();chatAbort.current=null;setSelectedKey(null);setSector('Todos');setKind('Todos');setQuery('');setProfile('walking');setMessages([]);setChatInput('');setChatBusy(false);setKeyboard(null);setMapView('nearby');setResetKey(n=>n+1);},[clearRoute]);
+  const reset=useCallback(()=>{clearRoute();chatAbort.current?.abort();chatAbort.current=null;setSelectedKey(null);setSector('Todos');setKind('Todos');setQuery('');setList(true);setPanelOpen(true);setPanelTab('places');setProfile('walking');setMessages([]);setChatInput('');setChatBusy(false);setKeyboard(null);setMapView('nearby');setResetKey(n=>n+1);},[clearRoute]);
+
   useEffect(()=>{alive.current=true;const controller=new AbortController();let inFlight=false;async function refresh(){if(inFlight||document.hidden)return;inFlight=true;try{const response=await fetch('/api/quibar/places',{signal:controller.signal,cache:'no-store'});if(!response.ok)throw Error();const data:Catalog=await response.json();if(!Array.isArray(data.places))throw Error();data.places=data.places.filter(p=>!('status'in p)||p.status==='Aprobado');if(!controller.signal.aborted){setCatalog(data);setError('');}}catch{if(!controller.signal.aborted){setCatalog(initial);setError('El catálogo local no está disponible. Estamos intentando reconectar.');}}finally{inFlight=false;if(!controller.signal.aborted)setReady(true);}}void refresh();const timer=setInterval(refresh,5000);return()=>{alive.current=false;controller.abort();clearInterval(timer);routeAbort.current?.abort();chatAbort.current?.abort();voiceAbort.current?.abort();audio.current?.pause();if(audioUrl.current)URL.revokeObjectURL(audioUrl.current);};},[]);
+
   useEffect(()=>{if(!ready)return;const current=new Map(catalog.places.map(p=>[p.key,p]));if(selectedKey&&!current.has(selectedKey))setSelectedKey(null);if(request&&[request.destination,...request.stops].some(key=>!current.get(key)?.located)){clearRoute();setRouteError('Un lugar cambió o ya no está disponible. Selecciona otro destino.');}else if(route&&[route.destination,...route.stops,...suggestions.map(s=>s.place)].some(old=>JSON.stringify(current.get(old.key))!==JSON.stringify(old))){clearRoute();setRouteError('La información de un lugar cambió. Vuelve a calcular el recorrido.');}else if(route&&(route.origin.latitude!==catalog.station.latitude||route.origin.longitude!==catalog.station.longitude)){clearRoute();setRouteError('La ubicación del tótem cambió. Vuelve a calcular la ruta.');}setSuggestions(s=>s.filter(p=>current.get(p.place.key)?.located));setMessages(m=>m.filter(message=>message.keys.every(k=>current.has(k))));},[catalog,ready]);
+
   useEffect(()=>{let timer:ReturnType<typeof setTimeout>;const restart=()=>{clearTimeout(timer);timer=setTimeout(reset,60000);};for(const type of ['pointerdown','keydown','input','touchstart'])window.addEventListener(type,restart);restart();return()=>{clearTimeout(timer);for(const type of ['pointerdown','keydown','input','touchstart'])window.removeEventListener(type,restart);};},[reset]);
-  function selectPlace(place:Place){if(route&&route.destination.key!==place.key)clearRoute();setSelectedKey(place.key);setKeyboard(null);setVoiceError('');if(place.kind==='business')track('CLICK_FICHA',place.id);}
+
+  function selectPlace(place:Place){if(route&&route.destination.key!==place.key)clearRoute();setSelectedKey(place.key);setPanelOpen(true);setPanelTab('places');setKeyboard(null);setVoiceError('');if(place.kind==='business')track('CLICK_FICHA',place.id);}
+
   async function json<T>(path:string,body:unknown,signal:AbortSignal):Promise<T>{const response=await fetch('/api/quibar'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal,cache:'no-store'});if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(typeof data.detail==='string'?data.detail:'No pudimos completar la solicitud. Vuelve a intentar.');}return response.json();}
-  async function calculate(data:RouteRequest){clearRoute();setBusy(true);setKeyboard(null);const controller=new AbortController();routeAbort.current=controller;const timeout=setTimeout(()=>controller.abort(),25000);try{const result=await json<Route>('/routes',data,controller.signal);if(routeAbort.current!==controller)return;setRoute(result);setRequest(data);setNarration({text:result.text,id:result.narration_id,mode:'basico'});setBusy(false);setSuggesting(true);const options=await json<{suggestions:Suggestion[];text:string;narration_id:string}>('/routes/suggestions',data,controller.signal);if(routeAbort.current!==controller)return;setSuggestions(options.suggestions);setNarration({text:options.text,id:options.narration_id,mode:'basico'});setSuggesting(false);if(options.suggestions.length){const fallback=result.text+' En el camino puedes conocer '+options.suggestions.map(p=>p.place.name).join(', ')+'. Añade una parada si te interesa.';setNarration({text:options.text||fallback,id:options.narration_id,mode:'basico'});try{const spoken=await json<{text:string;narration_id:string;mode:string}>('/routes/narration',{...data,suggestions:options.suggestions.map(p=>p.place.key)},controller.signal);if(routeAbort.current===controller){stopAudio();setNarration({text:spoken.text,id:spoken.narration_id,mode:spoken.mode});}}catch{/* The route and deterministic suggestions remain available. */}}}catch(e){if(routeAbort.current===controller){setRouteError(controller.signal.aborted?'El cálculo tardó demasiado. Intenta nuevamente.':(e as Error).message);}}finally{clearTimeout(timeout);if(routeAbort.current===controller){setBusy(false);setSuggesting(false);}}}
+
+  async function calculate(data:RouteRequest){clearRoute();setBusy(true);setPanelOpen(true);setPanelTab('route');setKeyboard(null);const controller=new AbortController();routeAbort.current=controller;const timeout=setTimeout(()=>controller.abort(),25000);try{const result=await json<Route>('/routes',data,controller.signal);if(routeAbort.current!==controller)return;setRoute(result);setRequest(data);setNarration({text:result.text,id:result.narration_id,mode:'basico'});setBusy(false);setSuggesting(true);const options=await json<{suggestions:Suggestion[];text:string;narration_id:string}>('/routes/suggestions',data,controller.signal);if(routeAbort.current!==controller)return;setSuggestions(options.suggestions);setNarration({text:options.text,id:options.narration_id,mode:'basico'});setSuggesting(false);if(options.suggestions.length){const fallback=result.text+' En el camino puedes conocer '+options.suggestions.map(p=>p.place.name).join(', ')+'. Añade una parada si te interesa.';setNarration({text:options.text||fallback,id:options.narration_id,mode:'basico'});try{const spoken=await json<{text:string;narration_id:string;mode:string}>('/routes/narration',{...data,suggestions:options.suggestions.map(p=>p.place.key)},controller.signal);if(routeAbort.current===controller){stopAudio();setNarration({text:spoken.text,id:spoken.narration_id,mode:spoken.mode});}}catch{/* The route and deterministic suggestions remain available. */}}}catch(e){if(routeAbort.current===controller){setRouteError(controller.signal.aborted?'El cálculo tardó demasiado. Intenta nuevamente.':(e as Error).message);}}finally{clearTimeout(timeout);if(routeAbort.current===controller){setBusy(false);setSuggesting(false);}}}
+
   async function listen(){if(speaking){stopAudio();return;}if(!narration.id)return;stopAudio();setVoiceError('');setSpeaking(true);const controller=new AbortController();voiceAbort.current=controller;try{const response=await fetch('/api/quibar/routes/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({narration_id:narration.id}),signal:controller.signal});if(!response.ok)throw Error();const blob=await response.blob();if(voiceAbort.current!==controller)return;audioUrl.current=URL.createObjectURL(blob);audio.current=new Audio(audioUrl.current);audio.current.onended=stopAudio;audio.current.onerror=()=>{stopAudio();setVoiceError('No pudimos reproducir la voz. Puedes leer el mensaje.');};await audio.current.play();}catch{if(!controller.signal.aborted){stopAudio();setVoiceError('La voz no está disponible. Puedes seguir leyendo y usando el mapa.');}}}
-  async function ask(){const text=chatInput.trim();if(!text||chatBusy)return;chatAbort.current?.abort();const controller=new AbortController();chatAbort.current=controller;setMessages(m=>[...m,{role:'user',text,keys:[]}]);setChatInput('');setChatBusy(true);setKeyboard(null);const timeout=setTimeout(()=>controller.abort(),12000);try{const data=await json<{reply:string;matches:{id:string}[]}>('/chat',{query:text,scope:'circuit',context_ids:messages.at(-1)?.keys??[],history:messages.slice(-4).map(m=>({role:m.role,content:m.text.slice(0,300)}))},controller.signal);if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:data.reply,keys:data.matches.map(p=>p.id)}]);}catch{if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:'Puedes seguir explorando los lugares del mapa mientras recuperamos la conexión con Quíbar.',keys:[]}]);}finally{clearTimeout(timeout);if(chatAbort.current===controller)setChatBusy(false);}}
-  return <main className="map-app"><header className="map-header"><a href="/" className="map-brand" aria-label="Quíbar inicio"><Compass size={29}/><span>quibar<span>.</span></span></a><div className="map-heading"><h1>Santa Bárbara <span>— Huequecura — Ralco</span></h1><p>Un territorio, muchas formas de descubrirlo.</p></div><button className="map-reset" aria-label="Volver al inicio" onClick={reset}><RotateCcw size={20}/><span>Volver al inicio</span></button></header>
-    <div className="explore-layout"><section className="map-workspace" aria-label="Explorar el circuito"><div className="map-toolbar"><label className="map-search"><Search size={23}/><span className="sr-only">Buscar lugares</span><input inputMode="none" maxLength={150} aria-label="Buscar lugares" value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setKeyboard('search')} placeholder="Busca un lugar o algo que hacer…"/>{query&&<button aria-label="Borrar búsqueda" onClick={()=>setQuery('')}><X size={20}/></button>}</label><button className="list-toggle" aria-pressed={list} onClick={()=>setList(v=>!v)}><List size={21}/> Lugares</button></div>
-      <div className="sector-tabs" aria-label="Filtrar por sector">{['Todos',...sectors].map(s=><button key={s} aria-label={s==='Todos'?'Todo el circuito':s} aria-pressed={s===sector} onClick={()=>{setSector(s);setKeyboard(null);}}>{s==='Todos'?<><span className="sector-long">Todo el circuito</span><span className="sector-short">Todos</span></>:s}</button>)}</div>
-      <div className="map-canvas"><Suspense fallback={<div className="map-loading" role="status">Preparando el mapa del circuito…</div>}><TerritoryMap catalog={catalog} places={mapPlaces} selected={selectedKey} route={route} suggested={suggestions.map(p=>p.place.key)} resetKey={resetKey} view={mapView} onSelect={selectPlace}/></Suspense><button className="map-overview" onClick={()=>{setMapView('circuit');setResetKey(n=>n+1);}}><Compass size={19}/> Ver circuito</button><WeatherCard/></div>
-      <div className="map-footer"><span><MapPin size={16}/> Santa Bárbara · Huequecura · Ralco</span><span>Después de 60 s sin uso, volvemos al mapa inicial.</span></div></section>
-      <aside className="explore-panel" aria-label="Lugares y recomendaciones de Quíbar"><div className="guide-intro"><img src="/quibar-angostura-original.png" alt="Quíbar, mascota de Angostura del Biobío"/><div><h2>{route?'Te acompaño en el camino':selected?'Tu próxima parada':'¿Qué descubrimos hoy?'}</h2><p>{route?'Conoce otros lugares antes de llegar.':'Toca un punto del mapa o elige un lugar de la lista.'}</p></div></div>
-      <div className="panel-scroll">{error&&<p role="alert" className="travel-error">{error}</p>}{routeError&&<p role="alert" className="travel-error">{routeError}</p>}
-      {selected?<section className="place-detail"><button className="text-button" onClick={()=>{setSelectedKey(null);clearRoute();}}><ArrowLeft size={18}/> Todos los lugares</button>{selected.photos?.[0]&&<img className="place-photo" src={selected.photos[0].url} alt={selected.photos[0].alt}/>}<div className="place-detail-header">{selected.logo_url&&<img className="place-detail-logo" src={selected.logo_url} alt={`Logotipo de ${selected.name}`}/>}<div><h2>{selected.name}</h2><span className="place-category">{selected.category} · {selected.sector||selected.commune}</span></div></div>{selected.demo&&<span className="demo-label">{selected.located?selected.kind==='business'?'Ubicación de demostración · negocio ficticio':'Ubicación de demostración · lugar ficticio':'Ficha ficticia de ejemplo · ubicación pendiente'}</span>}<p>{selected.description}</p>{selected.access&&<p><strong>Acceso:</strong> {selected.access}</p>}{selected.hours&&<p className="place-hours"><strong>{selected.demo?'Horario de ejemplo':'Horario informado'}</strong><br/>{selected.hours}</p>}
-        <div className="travel-modes" role="group" aria-label="Medio de transporte"><button aria-pressed={profile==='walking'} onClick={()=>{setProfile('walking');if(request)void calculate({...request,profile:'walking'});}}><Footprints size={21}/> A pie</button><button aria-pressed={profile==='driving'} onClick={()=>{setProfile('driving');if(request)void calculate({...request,profile:'driving'});}}><Car size={21}/> En vehículo</button></div>
-        {!selected.located?<p className="travel-note">Esta ficha aún no tiene coordenadas verificadas.</p>:!catalog.station.configured?<p className="travel-note">El equipo debe configurar la ubicación del tótem para mostrar cómo llegar.</p>:<button className="travel-primary" disabled={busy} onClick={()=>void calculate({destination:selected.key,profile,stops:[]})}><Navigation size={21}/>{busy?'Calculando recorrido…':route?'Recalcular ruta directa':'Cómo llegar'}<ArrowRight size={20}/></button>}
-      </section>:<><div className="kind-tabs" role="group" aria-label="Tipo de lugar">{[['Todos','Todos'],['business','Comercios'],['interest','Atractivos']].map(([v,label])=><button key={v} aria-pressed={kind===v} onClick={()=>setKind(v)}>{label}</button>)}</div>{!ready?<p role="status">Cargando lugares del circuito…</p>:list&&<section className="places-list" aria-label="Lista de lugares"><div className="places-count">{visible.length} {visible.length===1?'lugar':'lugares'} para descubrir</div>{visible.map(p=>{const Icon=placeIconComponent(p);return <button className="place-list-row" key={p.key} onClick={()=>selectPlace(p)} aria-label={'Ver ficha de '+p.name}><span className={`place-list-icon ${p.kind} ${p.logo_url?'has-logo':''}`}>{p.logo_url?<img className="place-list-logo" src={p.logo_url} alt=""/>:<Icon size={22}/>}</span><span><strong>{p.name}</strong><small>{p.sector||p.commune} · {p.category}</small>{p.demo&&<small className="list-demo">Ficha ficticia de ejemplo</small>}{!p.located&&<small>Ubicación pendiente de verificar</small>}</span><ArrowRight size={20}/></button>;})}{!visible.length&&!error&&<div className="places-empty"><Compass size={34}/><h3>{query?'No encontramos ese lugar':'El circuito se está preparando'}</h3><p>{query?'Prueba otra búsqueda o cambia los filtros.':'El equipo está incorporando comercios y atractivos con ubicaciones verificadas.'}</p>{(query||sector!=='Todos'||kind!=='Todos')&&<button className="text-button" onClick={()=>{setQuery('');setSector('Todos');setKind('Todos');}}>Ver todos los lugares</button>}</div>}</section>}</>}
-      {route&&<section className="route-detail" aria-label="Tu recorrido"><div className="route-heading"><h3>Tu recorrido</h3><button aria-label="Cerrar recorrido" onClick={clearRoute}><X size={20}/></button></div><div className="route-stats"><strong>{minutes(route.duration_s)}</strong><span>{route.distance_m<1000?`${route.distance_m} m`:`${(route.distance_m/1000).toFixed(1)} km`} · {route.profile==='walking'?'A pie':'En vehículo'}</span></div><p className="route-disclaimer">{route.notice}</p>{(route.destination.demo||route.stops.some(p=>p.demo))&&<p className="travel-note">Recorrido de demostración: incluye lugares ficticios.</p>}<ol className="route-stops"><li><span className="stop-dot">O</span>{route.origin.name}</li>{route.stops.map((p,i)=><li key={p.key}><span className="stop-dot">{i+1}</span>{p.name}<button aria-label={'Quitar parada '+p.name} onClick={()=>request&&void calculate({...request,stops:request.stops.filter(key=>key!==p.key)})}><X size={18}/></button></li>)}<li><span className="stop-dot">D</span>{route.destination.name}</li></ol><details className="route-directions"><summary>Ver indicaciones paso a paso</summary><ol>{route.maneuvers.map((m,i)=><li key={i}>{m.instruction}</li>)}</ol></details><button className="travel-primary" onClick={()=>{setQr(v=>!v);if(!qr)track('QR_MOSTRADO',route.destination.kind==='business'?route.destination.id:undefined);}}>{qr?<X size={21}/>:<Navigation size={21}/>} {qr?'Cerrar código':'Llevar recorrido al celular'}</button>{qr&&<div className="route-qr"><QRCodeSVG value={routeUrl(route)} size={220} marginSize={4} title="Abrir recorrido con paradas en Google Maps"/><p>Escanea con la cámara. Google Maps recalculará el recorrido y puede necesitar conexión.</p></div>}
-        <div className="quibar-route-message" aria-live="polite"><Sparkles size={22}/><p>{narration.text}</p></div><button className="listen-button" disabled={!narration.id} onClick={()=>void listen()}>{speaking?<Square size={19}/>:<Volume2 size={21}/>} {speaking?'Detener voz':'Escuchar a Quíbar'}</button>{voiceError&&<p role="status" className="travel-note">{voiceError}</p>}
-        <div className="suggestion-heading"><h3>También en tu camino</h3>{suggesting&&<p role="status">Comprobando accesos y desvíos…</p>}</div>{!suggesting&&!suggestions.length&&<p className="travel-note">{route.stops.length===3?'Ya elegiste las tres paradas que puedes llevar al celular.':'No hay otras paradas verificadas dentro del desvío permitido para este recorrido.'}</p>}{suggestions.map(s=><article className="route-suggestion" key={s.place.key}><h4>{s.place.name}</h4>{s.place.demo&&<span className="demo-label">{s.place.kind==='business'?'Negocio ficticio de demostración':'Lugar ficticio de demostración'}</span>}<span>{s.place.category} · {s.place.sector}</span><p>{s.place.summary}</p><button disabled={busy} onClick={()=>request&&void calculate({...request,stops:s.stop_order})}><Plus size={18}/> Añadir parada <small>+{minutes(s.extra_duration_s)}</small></button></article>)}
-      </section>}
-      <section className="map-chat" aria-label="Pregúntale a Quíbar"><h3><Sparkles size={20}/> Pregúntale a Quíbar</h3><div role="log" aria-live="polite">{messages.map((m,i)=><div key={i} className={'map-chat-message '+m.role}><p>{m.text}</p>{m.keys.map(key=>{const p=catalog.places.find(p=>p.key===key);return p?<button key={key} onClick={()=>selectPlace(p)}>{p.name}<ArrowRight size={17}/></button>:null;})}</div>)}{chatBusy&&<p role="status">Quíbar está consultando los lugares del circuito…</p>}</div><form onSubmit={e=>{e.preventDefault();void ask();}}><label className="sr-only" htmlFor="map-chat-input">Pregúntale a Quíbar</label><input id="map-chat-input" inputMode="none" maxLength={250} value={chatInput} onFocus={()=>setKeyboard('chat')} onChange={e=>setChatInput(e.target.value)} placeholder="¿Dónde puedo comer en Ralco?"/><button aria-label="Enviar pregunta" disabled={chatBusy||!chatInput.trim()||!ready||!!error}><Send size={20}/></button></form><p className="guide-footnote">Usamos lugares aprobados. Si la IA no responde, Quíbar sigue ayudándote con el catálogo.</p></section>
-      </div></aside></div>
+
+  async function ask(){const text=chatInput.trim();if(!text||chatBusy)return;chatAbort.current?.abort();const controller=new AbortController();chatAbort.current=controller;setPanelOpen(true);setPanelTab('chat');setMessages(m=>[...m,{role:'user',text,keys:[]}]);setChatInput('');setChatBusy(true);setKeyboard(null);const timeout=setTimeout(()=>controller.abort(),12000);try{const data=await json<{reply:string;matches:{id:string}[]}>('/chat',{query:text,scope:'circuit',context_ids:messages.at(-1)?.keys??[],history:messages.slice(-4).map(m=>({role:m.role,content:m.text.slice(0,300)}))},controller.signal);if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:data.reply,keys:data.matches.map(p=>p.id)}]);}catch{if(chatAbort.current===controller)setMessages(m=>[...m,{role:'assistant',text:'Puedes seguir explorando los lugares del mapa mientras recuperamos la conexión con Quíbar.',keys:[]}]);}finally{clearTimeout(timeout);if(chatAbort.current===controller)setChatBusy(false);}}
+
+  return <main className="map-app">
+    <div className="colbun-ribbon" aria-hidden="true"/>
+    <header className="map-header">
+      <div className="map-heading">
+        <h1>Explora con Quíbar</h1>
+        <p>Comercios, miradores y rutas locales</p>
+      </div>
+      <div className="map-header-actions">
+        <button className="map-reset" aria-label="Volver al inicio" onClick={reset}><RotateCcw size={18}/><span>Volver al inicio</span></button>
+        <a href="/" className="map-brand" aria-label="Colbún inicio"><img src="/brand/colbun-imagotipo.svg" alt="Colbún, Transforma, Impulsa, Sueña" className="map-brand-logo"/></a>
+      </div>
+    </header>
+
+    <div className="explore-layout">
+      <section className="map-workspace" aria-label="Explorar el circuito">
+        <div className="map-canvas">
+          <Suspense fallback={<div className="map-loading" role="status">Preparando el mapa del circuito…</div>}>
+            <TerritoryMap catalog={catalog} places={mapPlaces} selected={selectedKey} route={route} suggested={suggestions.map(p=>p.place.key)} resetKey={resetKey} view={mapView} onSelect={selectPlace}/>
+          </Suspense>
+
+          <div className="map-hud-top">
+            <div className="map-toolbar">
+              <label className="map-search">
+                <Search size={20}/>
+                <span className="sr-only">Buscar lugares</span>
+                <input inputMode="none" maxLength={150} aria-label="Buscar lugares" value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>setKeyboard('search')} placeholder="Busca un lugar o algo que hacer…"/>
+                {query&&<button aria-label="Borrar búsqueda" onClick={()=>setQuery('')}><X size={18}/></button>}
+              </label>
+              <button className="list-toggle" aria-pressed={list} onClick={()=>{setList(v=>!v);setPanelOpen(true);setPanelTab('places');}}>
+                <List size={19}/><span>Lugares</span>
+              </button>
+              <button className="map-overview" onClick={()=>{setMapView('circuit');setResetKey(n=>n+1);}}>
+                <Compass size={18}/><span>Ver circuito</span>
+              </button>
+              {!panelOpen&&<button className="panel-reopen" aria-label="Abrir panel de exploración" onClick={()=>setPanelOpen(true)}>
+                <PanelRightOpen size={18}/><span>Explorar</span>
+              </button>}
+            </div>
+            <div className="sector-tabs" aria-label="Filtrar por sector">
+              {['Todos',...sectors].map(s=><button key={s} aria-label={s==='Todos'?'Todo el circuito':s} aria-pressed={s===sector} onClick={()=>{setSector(s);setKeyboard(null);}}>{s==='Todos'?<><span className="sector-long">Todo el circuito</span><span className="sector-short">Todos</span></>:s}</button>)}
+            </div>
+          </div>
+
+          <WeatherCard/>
+
+          <div className="map-footer">
+            <span><MapPin size={14}/> Circuito Angostura</span>
+            <span>Reinicio automático en 60 s</span>
+          </div>
+        </div>
+      </section>
+
+      <aside className={`explore-panel ${panelOpen?'is-open':'is-collapsed'}`} aria-label="Lugares y recomendaciones de Quíbar" hidden={!panelOpen}>
+        <div className="guide-intro">
+          <img className="guide-watermark" src="/brand/colbun-isotipo.svg" alt="" aria-hidden="true"/>
+          <img className="guide-mascot" src="/quibar-angostura-original.png" alt="Quíbar, mascota de Angostura del Biobío"/>
+          <div className="guide-intro-copy">
+            <h2>{route?'Te acompaño en el camino':selected?'Tu próxima parada':'¿Qué descubrimos hoy?'}</h2>
+            <p>{route?'Conoce otros lugares antes de llegar.':'Toca un punto del mapa o elige un lugar de la lista.'}</p>
+          </div>
+          <button className="panel-close-btn" aria-label="Ocultar panel" onClick={()=>setPanelOpen(false)}><PanelRightClose size={20}/></button>
+        </div>
+
+        <div className="panel-tabs" role="tablist" aria-label="Secciones del panel">
+          <button role="tab" aria-selected={panelTab==='places'} onClick={()=>setPanelTab('places')}><ColbunMapIcon size={17}/><span>Lugares</span></button>
+          <button role="tab" aria-selected={panelTab==='route'} onClick={()=>setPanelTab('route')}><Navigation size={16}/><span>Ruta{route?' activa':''}</span></button>
+          <button role="tab" aria-selected={panelTab==='chat'} onClick={()=>setPanelTab('chat')}><ColbunCoffeeIcon size={17}/><span>Asistente</span></button>
+        </div>
+
+        <div className="panel-scroll">
+          {error&&<p role="alert" className="travel-error">{error}</p>}
+          {routeError&&<p role="alert" className="travel-error">{routeError}</p>}
+
+          {panelTab==='places'&&(selected?<section className="place-detail">
+            <button className="text-button" onClick={()=>{setSelectedKey(null);clearRoute();}}><ArrowLeft size={18}/> Todos los lugares</button>
+            {selected.photos?.[0]&&<img className="place-photo" src={selected.photos[0].url} alt={selected.photos[0].alt}/>}
+            <div className="place-detail-header">
+              {selected.logo_url&&<img className="place-detail-logo" src={selected.logo_url} alt={`Logotipo de ${selected.name}`}/>}
+              <div>
+                <h2>{selected.name}</h2>
+                <span className="place-category">{selected.category}, {selected.sector||selected.commune}</span>
+              </div>
+            </div>
+            {selected.demo&&<span className="demo-label">{selected.located?selected.kind==='business'?'Ubicación de demostración · negocio ficticio':'Ubicación de demostración · lugar ficticio':'Ficha ficticia de ejemplo · ubicación pendiente'}</span>}
+            <p>{selected.description}</p>
+            {selected.access&&<p><strong>Acceso:</strong> {selected.access}</p>}
+            {selected.hours&&<p className="place-hours"><strong>{selected.demo?'Horario de ejemplo':'Horario informado'}</strong><br/>{selected.hours}</p>}
+            <div className="travel-modes" role="group" aria-label="Medio de transporte">
+              <button aria-pressed={profile==='walking'} onClick={()=>{setProfile('walking');if(request)void calculate({...request,profile:'walking'});}}><Footprints size={20}/> A pie</button>
+              <button aria-pressed={profile==='driving'} onClick={()=>{setProfile('driving');if(request)void calculate({...request,profile:'driving'});}}><Car size={20}/> En vehículo</button>
+            </div>
+            {!selected.located?<p className="travel-note">Esta ficha aún no tiene coordenadas verificadas.</p>:!catalog.station.configured?<p className="travel-note">El equipo debe configurar la ubicación del tótem para mostrar cómo llegar.</p>:<button className="travel-primary" disabled={busy} onClick={()=>void calculate({destination:selected.key,profile,stops:[]})}><Navigation size={20}/>{busy?'Calculando recorrido…':route?'Recalcular ruta directa':'Cómo llegar'}<ArrowRight size={19}/></button>}
+          </section>:<>
+            <div className="kind-tabs" role="group" aria-label="Tipo de lugar">
+              {[['Todos','Todos'],['business','Comercios'],['interest','Atractivos']].map(([v,label])=><button key={v} aria-pressed={kind===v} onClick={()=>setKind(v)}>{label}</button>)}
+            </div>
+            {!ready?<p role="status">Cargando lugares del circuito…</p>:list&&<section className="places-list" aria-label="Lista de lugares">
+              <div className="places-count">{visible.length} {visible.length===1?'lugar':'lugares'} para descubrir</div>
+              {visible.map(p=>{const Icon=placeIconComponent(p);return <button className="place-list-row" key={p.key} onClick={()=>selectPlace(p)} aria-label={'Ver ficha de '+p.name}>
+                <span className={`place-list-icon ${p.kind} ${p.logo_url?'has-logo':''}`}>{p.logo_url?<img className="place-list-logo" src={p.logo_url} alt=""/>:<Icon size={22}/>}</span>
+                <span className="place-list-meta">
+                  <strong>{p.name}</strong>
+                  <small>{p.sector||p.commune}, {p.category}</small>
+                  {p.demo&&<small className="list-demo">Ficha ficticia de ejemplo</small>}
+                  {!p.located&&<small>Ubicación pendiente de verificar</small>}
+                </span>
+                <ChevronRight size={18}/>
+              </button>;})}
+              {!visible.length&&!error&&<div className="places-empty">
+                <ColbunMapIcon size={36}/>
+                <h3>{query?'No encontramos ese lugar':'El circuito se está preparando'}</h3>
+                <p>{query?'Prueba otra búsqueda o cambia los filtros.':'El equipo está incorporando comercios y atractivos con ubicaciones verificadas.'}</p>
+                {(query||sector!=='Todos'||kind!=='Todos')&&<button className="text-button" onClick={()=>{setQuery('');setSector('Todos');setKind('Todos');}}>Ver todos los lugares</button>}
+              </div>}
+            </section>}
+          </>)}
+
+          {panelTab==='route'&&(route?<section className="route-detail" aria-label="Tu recorrido">
+            <div className="route-heading">
+              <h3>Tu recorrido</h3>
+              <button aria-label="Cerrar recorrido" onClick={()=>{clearRoute();setPanelTab('places');}}><X size={20}/></button>
+            </div>
+            <div className="route-stats">
+              <strong>{minutes(route.duration_s)}</strong>
+              <span>{route.distance_m<1000?`${route.distance_m} m`:`${(route.distance_m/1000).toFixed(1)} km`}, {route.profile==='walking'?'a pie':'en vehículo'}</span>
+            </div>
+            <p className="route-disclaimer">{route.notice}</p>
+            {(route.destination.demo||route.stops.some(p=>p.demo))&&<p className="travel-note">Recorrido de demostración: incluye lugares ficticios.</p>}
+            <ol className="route-stops">
+              <li><span className="stop-dot">O</span>{route.origin.name}</li>
+              {route.stops.map((p,i)=><li key={p.key}><span className="stop-dot">{i+1}</span>{p.name}<button aria-label={'Quitar parada '+p.name} onClick={()=>request&&void calculate({...request,stops:request.stops.filter(key=>key!==p.key)})}><X size={18}/></button></li>)}
+              <li><span className="stop-dot">D</span>{route.destination.name}</li>
+            </ol>
+            <details className="route-directions">
+              <summary>Ver indicaciones paso a paso</summary>
+              <ol>{route.maneuvers.map((m,i)=><li key={i}>{m.instruction}</li>)}</ol>
+            </details>
+            <button className="travel-primary" onClick={()=>{setQr(v=>!v);if(!qr)track('QR_MOSTRADO',route.destination.kind==='business'?route.destination.id:undefined);}}>{qr?<X size={20}/>:<Navigation size={20}/>} {qr?'Cerrar código':'Llevar recorrido al celular'}</button>
+            {qr&&<div className="route-qr"><QRCodeSVG value={routeUrl(route)} size={210} marginSize={4} title="Abrir recorrido con paradas en Google Maps"/><p>Escanea con la cámara. Google Maps recalculará el recorrido y puede necesitar conexión.</p></div>}
+            <div className="quibar-route-message" aria-live="polite"><Sparkles size={20}/><p>{narration.text}</p></div>
+            <button className="listen-button" disabled={!narration.id} onClick={()=>void listen()}>{speaking?<Square size={18}/>:<Volume2 size={20}/>} {speaking?'Detener voz':'Escuchar a Quíbar'}</button>
+            {voiceError&&<p role="status" className="travel-note">{voiceError}</p>}
+            <div className="suggestion-heading">
+              <h3>También en tu camino</h3>
+              {suggesting&&<p role="status">Comprobando accesos y desvíos…</p>}
+            </div>
+            {!suggesting&&!suggestions.length&&<p className="travel-note">{route.stops.length===3?'Ya elegiste las tres paradas que puedes llevar al celular.':'No hay otras paradas verificadas dentro del desvío permitido para este recorrido.'}</p>}
+            {suggestions.map(s=><article className="route-suggestion" key={s.place.key}>
+              <h4>{s.place.name}</h4>
+              {s.place.demo&&<span className="demo-label">{s.place.kind==='business'?'Negocio ficticio de demostración':'Lugar ficticio de demostración'}</span>}
+              <span>{s.place.category}, {s.place.sector}</span>
+              <p>{s.place.summary}</p>
+              <button disabled={busy} onClick={()=>request&&void calculate({...request,stops:s.stop_order})}><Plus size={18}/> Añadir parada <small>+{minutes(s.extra_duration_s)}</small></button>
+            </article>)}
+          </section>:<div className="places-empty">
+            <Navigation size={34}/>
+            <h3>{busy?'Calculando tu ruta…':'Sin ruta activa'}</h3>
+            <p>{busy?'Buscamos el mejor camino por el circuito.':'Selecciona un comercio o atractivo en Lugares y toca Cómo llegar para trazar el recorrido.'}</p>
+            {!busy&&<button className="text-button" onClick={()=>setPanelTab('places')}><ArrowLeft size={16}/> Ir a Lugares</button>}
+          </div>)}
+
+          {panelTab==='chat'&&<section className="map-chat" aria-label="Pregúntale a Quíbar">
+            <h3><Sparkles size={18}/> Pregúntale a Quíbar</h3>
+            <div className="map-chat-log" role="log" aria-live="polite">
+              {!messages.length&&<p className="chat-welcome">Consulta por comida típica, miradores, artesanía o cómo moverte entre Santa Bárbara, Huequecura y Ralco.</p>}
+              {messages.map((m,i)=><div key={i} className={'map-chat-message '+m.role}><p>{m.text}</p>{m.keys.map(key=>{const p=catalog.places.find(p=>p.key===key);return p?<button key={key} onClick={()=>selectPlace(p)}>{p.name}<ArrowRight size={17}/></button>:null;})}</div>)}
+              {chatBusy&&<p role="status">Quíbar está consultando los lugares del circuito…</p>}
+            </div>
+            <form onSubmit={e=>{e.preventDefault();void ask();}}>
+              <label className="sr-only" htmlFor="map-chat-input">Pregúntale a Quíbar</label>
+              <input id="map-chat-input" inputMode="none" maxLength={250} value={chatInput} onFocus={()=>setKeyboard('chat')} onChange={e=>setChatInput(e.target.value)} placeholder="¿Dónde puedo comer en Ralco?"/>
+              <button aria-label="Enviar pregunta" disabled={chatBusy||!chatInput.trim()||!ready||!!error}><Send size={19}/></button>
+            </form>
+            <p className="guide-footnote">Usamos lugares aprobados. Si la IA no responde, Quíbar sigue ayudándote con el catálogo.</p>
+          </section>}
+        </div>
+      </aside>
+    </div>
+
     {keyboard&&<div className="map-keyboard" role="group" aria-label="Teclado táctil"><div><strong>{keyboard==='search'?'Buscar un lugar':'Pregúntale a Quíbar'}</strong><button onClick={()=>setKeyboard(null)}><X size={20}/> Cerrar teclado</button></div>{['qwertyuiop','asdfghjklñ','zxcvbnm'].map(row=><div className="map-keyboard-row" key={row}>{[...row].map(key=><button key={key} onClick={()=>{const setter=keyboard==='search'?setQuery:setChatInput;setter(s=>s+key);}}>{key.toUpperCase()}</button>)}</div>)}<div className="map-keyboard-row"><button onClick={()=>{const setter=keyboard==='search'?setQuery:setChatInput;setter(s=>s.slice(0,-1));}}><Delete size={20}/> Borrar</button><button onClick={()=>{const setter=keyboard==='search'?setQuery:setChatInput;setter(s=>s+' ');}}>Espacio</button><button onClick={()=>{if(keyboard==='chat')void ask();else setKeyboard(null);}}><Check size={20}/> {keyboard==='chat'?'Preguntar':'Ver resultados'}</button></div></div>}
   </main>;
 }

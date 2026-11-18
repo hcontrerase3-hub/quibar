@@ -160,8 +160,10 @@ export default function Admin() {
 
   if (!ready) return <main className="admin-login"><p>Cargando administración…</p></main>;
   if (!user) return <main className="admin-login"><form onSubmit={login} className="admin-login-card">
-    <span className="admin-eyebrow">QUÍBAR · ADMINISTRACIÓN LOCAL</span><h1>Gestionar el territorio</h1>
-    <p>Acceso para el equipo autorizado. Las fichas aprobadas alimentan el catálogo y el asistente local.</p>
+    <div className="colbun-ribbon admin-card-ribbon" aria-hidden="true" />
+    <img src="/brand/colbun-imagotipo.svg" alt="Colbún · Transforma, Impulsa, Sueña" className="admin-login-logo" />
+    <h1>Gestionar el territorio</h1>
+    <p>Administración local para el equipo autorizado. Las fichas aprobadas alimentan el catálogo y el asistente.</p>
     {error && <p className="admin-error" role="alert">{error}</p>}
     <label>Correo institucional<input required type="email" autoComplete="username" value={email} onChange={e => setEmail(e.target.value)} /></label>
     <label>Contraseña<input required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></label>
@@ -169,7 +171,8 @@ export default function Admin() {
   </form></main>;
 
   return <main className="admin-shell">
-    <header className="admin-header"><a href="/" className="admin-logo">quibar.</a><span>Administración del catálogo</span><div><strong>{user.name}</strong><small>{user.role}</small></div><button disabled={busy} onClick={() => run(async () => { await api("/session", { method: "DELETE" }); setUser(null); setDraft(null); setRows([]); })}>Cerrar sesión</button></header>
+    <div className="colbun-ribbon" aria-hidden="true" />
+    <header className="admin-header"><a href="/" className="admin-logo" aria-label="Colbún inicio"><img src="/brand/colbun-imagotipo.svg" alt="Colbún · Transforma, Impulsa, Sueña" /></a><span>Administración del catálogo</span><div><strong>{user.name}</strong><small>{user.role}</small></div><button disabled={busy} onClick={() => run(async () => { await api("/session", { method: "DELETE" }); setUser(null); setDraft(null); setRows([]); })}>Cerrar sesión</button></header>
     <nav className="admin-tabs" aria-label="Administración">{[["catalog", "Catálogo"], ["territory", "Atractivos y tótem"], ["metrics", "Uso del tótem"], ...(user.role === "Administrador" ? [["audit", "Auditoría"], ["users", "Usuarios"]] : [])].map(([key, label]) => <button key={key} aria-current={tab === key ? "page" : undefined} onClick={() => selectTab(key)}>{label}</button>)}</nav>
     {error && <p className="admin-error" role="alert">{error}</p>}{notice && <p className="admin-notice" role="status">{notice}</p>}
     {tab === "territory" && <TerritoryAdmin api={api} administrator={user.role === "Administrador"} communes={lookups.communes} />}

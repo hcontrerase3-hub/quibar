@@ -1,68 +1,67 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
-  BedDouble,
-  Binoculars,
-  Coffee,
-  Compass,
-  Flag,
-  Footprints,
-  Landmark,
-  Mountain,
-  Palette,
-  Scissors,
-  ShoppingBag,
-  Tent,
-  Theater,
-  Trees,
-  UtensilsCrossed,
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+  ColbunActivityIcon,
+  ColbunCampIcon,
+  ColbunCoffeeIcon,
+  ColbunCraftIcon,
+  ColbunCultureIcon,
+  ColbunFoodIcon,
+  ColbunHeritageIcon,
+  ColbunMapIcon,
+  ColbunNatureIcon,
+  ColbunOutdoorsIcon,
+  ColbunShopIcon,
+  ColbunStayIcon,
+  ColbunTextileIcon,
+  ColbunViewpointIcon,
+  type ColbunIconComponent,
+} from './colbun-icons';
 import type { Place } from './map-types';
 
-export const businessVisualIcons: Record<string, LucideIcon> = {
-  stay: BedDouble,
-  food: UtensilsCrossed,
-  craft: Palette,
-  outdoors: Mountain,
-  coffee: Coffee,
-  shop: ShoppingBag,
-  camp: Tent,
-  textile: Scissors,
+export const businessVisualIcons: Record<string, ColbunIconComponent> = {
+  stay: ColbunStayIcon,
+  food: ColbunFoodIcon,
+  craft: ColbunCraftIcon,
+  outdoors: ColbunOutdoorsIcon,
+  coffee: ColbunCoffeeIcon,
+  shop: ColbunShopIcon,
+  camp: ColbunCampIcon,
+  textile: ColbunTextileIcon,
 };
 
-export const businessCategoryIcons: Record<string, LucideIcon> = {
-  Alojamiento: BedDouble,
-  Gastronomía: UtensilsCrossed,
-  Artesanía: Palette,
-  Turismo: Mountain,
-  Comercio: ShoppingBag,
+export const businessCategoryIcons: Record<string, ColbunIconComponent> = {
+  Alojamiento: ColbunStayIcon,
+  Gastronomía: ColbunFoodIcon,
+  Artesanía: ColbunCraftIcon,
+  Turismo: ColbunOutdoorsIcon,
+  Comercio: ColbunShopIcon,
 };
 
-export const interestCategoryIcons: Record<string, LucideIcon> = {
-  Mirador: Binoculars,
-  Naturaleza: Trees,
-  Patrimonio: Landmark,
-  Plaza: Flag,
-  Actividad: Footprints,
-  Cultura: Theater,
+export const interestCategoryIcons: Record<string, ColbunIconComponent> = {
+  Mirador: ColbunViewpointIcon,
+  Naturaleza: ColbunNatureIcon,
+  Patrimonio: ColbunHeritageIcon,
+  Plaza: ColbunFoodIcon,
+  Actividad: ColbunActivityIcon,
+  Cultura: ColbunCultureIcon,
 };
 
-export function placeIconComponent(place: Pick<Place, 'kind' | 'category' | 'visual'>): LucideIcon {
+export function placeIconComponent(place: Pick<Place, 'kind' | 'category' | 'visual'>): ColbunIconComponent {
   if (place.kind === 'business') {
     return (place.visual ? businessVisualIcons[place.visual] : undefined)
       ?? businessCategoryIcons[place.category]
-      ?? ShoppingBag;
+      ?? ColbunShopIcon;
   }
-  return interestCategoryIcons[place.category] ?? Compass;
+  return interestCategoryIcons[place.category] ?? ColbunMapIcon;
 }
 
-const svgCache = new Map<LucideIcon, string>();
+const svgCache = new Map<ColbunIconComponent, string>();
 
 export function placeIconSvg(place: Pick<Place, 'kind' | 'category' | 'visual'>): string {
   const Icon = placeIconComponent(place);
   let markup = svgCache.get(Icon);
   if (!markup) {
-    markup = renderToStaticMarkup(<Icon size={18} strokeWidth={2.2} aria-hidden="true" />);
+    markup = renderToStaticMarkup(<Icon size={20} />);
     svgCache.set(Icon, markup);
   }
   return markup;
