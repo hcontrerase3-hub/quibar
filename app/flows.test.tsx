@@ -240,3 +240,32 @@ test("ver circuito muestra toda la zona y volver al inicio recupera la vista del
   expect(map.getAttribute("data-view")).toBe("nearby");
   expect(map.getAttribute("data-reset-key")).not.toBe(previous);
 });
+
+test("centrar mapa recupera el encuadre inicial sin borrar filtros ni búsqueda", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => response(catalog)));
+  render(<Home />);
+  const map = await screen.findByLabelText("Mapa del circuito");
+  fireEvent.change(screen.getByRole("textbox", { name: "Buscar lugares" }), { target: { value: "café" } });
+  fireEvent.click(screen.getByRole("button", { name: "Ralco" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ver circuito" }));
+  expect(map.getAttribute("data-view")).toBe("circuit");
+  const previous = map.getAttribute("data-reset-key");
+  fireEvent.click(screen.getByRole("button", { name: "Centrar mapa" }));
+  expect(map.getAttribute("data-view")).toBe("nearby");
+  expect(map.getAttribute("data-reset-key")).not.toBe(previous);
+  expect((screen.getByRole("textbox", { name: "Buscar lugares" }) as HTMLInputElement).value).toBe("café");
+  expect(screen.getByRole("button", { name: "Ralco" }).getAttribute("aria-pressed")).toBe("true");
+});
+
+test("las pestañas del panel vinculan tabpanel y permiten navegar con flechas", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => response(catalog)));
+  render(<Home />);
+  const placesTab = await screen.findByRole("tab", { name: "Lugares" });
+  const routeTab = screen.getByRole("tab", { name: "Ruta" });
+  const panel = screen.getByRole("tabpanel");
+  expect(placesTab.getAttribute("aria-controls")).toBe("panel-tab-places");
+  expect(panel.getAttribute("aria-labelledby")).toBe("tab-places");
+  fireEvent.keyDown(placesTab, { key: "ArrowRight" });
+  expect(routeTab.getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("tabpanel").getAttribute("aria-labelledby")).toBe("tab-route");
+});

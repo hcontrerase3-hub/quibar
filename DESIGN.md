@@ -1,138 +1,64 @@
 ---
-name: Quíbar
-description: Sistema existente de la interfaz táctil y administración de Quíbar.
+name: Quíbar · Colbún
+description: Sistema visual de la interfaz táctil del mapa territorial y panel de administración de Quíbar.
 colors:
-  primary: "#0b6661"
-  map-action: "#176d60"
-  map-deep: "#174f45"
-  interest: "#a15a29"
-  station: "#235ea4"
-  focus: "#bb6722"
-  map-background: "#f5f6f0"
-  surface: "#fff"
-  map-foreground: "#163f3a"
-  map-border: "#dbe4dc"
-  message-background: "#edf4e9"
-  suggestion-background: "#f4f0e3"
+  primary: "#0076A8"
+  accent: "#00B2E6"
+  secondary: "#3662B2"
+  interest: "#C7520E"
+  station: "#8BBB2F"
+  focus: "#FF8031"
+  highlight: "#FFCD00"
+  background: "#F5F7FA"
+  surface: "#FFFFFF"
+  ink: "#2B3036"
+  muted: "#55585A"
+  border: "#DCE3EB"
+  map-green: "#CFE3BC"
 typography:
-  controls:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "14px"
-    fontWeight: 700
-  place-title:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "16px"
-    fontWeight: 700
-    lineHeight: 1.3
-  description:
-    fontFamily: "Arial, Helvetica, sans-serif"
-    fontSize: "14px"
-    lineHeight: 1.65
+  display:
+    fontFamily: "'Montserrat', 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, Helvetica, sans-serif"
+    headingWeight: 800
+    bodyWeight: 500
+    controlSize: "13px–14px"
 rounded:
-  control: "8px"
-  container: "10px"
-  overlay: "12px"
-  sector: "24px"
+  control: "999px"
+  container: "16px–20px"
+  card: "12px"
 spacing:
   compact: "8px"
   control: "12px"
-  message: "16px"
-  panel: "20px"
-  panel-inline: "22px"
-components:
-  map-primary:
-    backgroundColor: "{colors.map-action}"
-    textColor: "{colors.surface}"
-    typography: "{typography.controls}"
-    rounded: "{rounded.control}"
-    padding: "12px"
-  map-primary-hover:
-    backgroundColor: "#135647"
-  sector-selected:
-    backgroundColor: "{colors.map-deep}"
-    textColor: "{colors.surface}"
-    rounded: "{rounded.sector}"
-    padding: "0 17px"
-  suggestion-action:
-    backgroundColor: "{colors.suggestion-background}"
-    textColor: "#694c23"
-    padding: "0 11px"
-  guide-message:
-    backgroundColor: "{colors.message-background}"
-    textColor: "#285637"
-    rounded: "{rounded.container}"
-    padding: "16px"
+  panel: "16px–18px"
 ---
 
-# Design System: Quíbar
+# Design System: Quíbar (Identidad Colbún)
 
 ## Overview
 
-**Creative North Star: "Quíbar como guía del territorio existente"**
+**Creative North Star: "Mapa territorial a pantalla completa con explorador flotante retráctil Colbún"**
 
-Esta descripción conserva la identidad implementada: verdes profundos, superficies claras y la mascota suministrada. Es un registro del código actual, no una nueva dirección de marca. Las cifras del frontmatter corresponden a patrones reutilizados en la experiencia del mapa; la administración conserva sus variables globales.
-
-**Key Characteristics:**
-- Contraste entre panel blanco y cabecera verde de la guía.
-- Controles táctiles y texto directo en español.
-- Identificación visual distinta para comercios, atractivos y tótem.
+La interfaz pública del tótem prioriza el mapa interactivo del circuito Santa Bárbara–Huequecura–Ralco desde el primer fotograma, acompañado de un panel lateral flotante retráctil, controles HUD de alto contraste táctil y la mascota Quíbar. Tanto el tótem como la administración comparten los tokens `--colbun-*` definidos en `app/globals.css`.
 
 ## Colors
 
-### Primary
+- **Primary (`--colbun-blue-deep: #0076A8`, `--colbun-blue: #00B2E6`, `--colbun-blue-secondary: #3662B2`)**: acciones principales, pines de comercios, trazado de rutas y navegación activa.
+- **Interest (`--colbun-interest-pin: #C7520E`, `--colbun-orange: #FF8031`)**: atractivos turísticos (contraste ≥ 4.5:1 con icono blanco) y anillo de foco visible.
+- **Station (`--colbun-green: #8BBB2F`)**: marcador de ubicación del tótem ("Usted está aquí") con pulso radar.
+- **Highlight (`--colbun-yellow: #FFCD00`)**: selección y paradas sugeridas en el mapa.
+- **Neutrals (`--background: #F5F7FA`, `--colbun-white: #FFFFFF`, `--colbun-ink: #2B3036`, `--colbun-muted: #55585A`, `--border: #DCE3EB`)**: superficies claras de alto contraste pensadas para pantallas táctiles bajo luz ambiental.
 
-El verde global identifica acciones administrativas y componentes compartidos. En el mapa, el verde de acción cubre botones y comercios; el verde profundo cubre la cabecera de la guía y sectores seleccionados.
+## Typography & Offline Resilience
 
-### Secondary
+La familia principal es `--font-display` (`Montserrat` con respaldo geométrico del sistema sin peticiones de red externas para garantizar operación 100 % offline en el tótem). Los números de distancia, duración y temperatura usan `font-variant-numeric: tabular-nums`.
 
-Terracota identifica atractivos. Azul identifica el tótem; no representa otra categoría de comercio. El tono cálido de foco hace visible la navegación por teclado.
+## Layout & Responsive
 
-### Neutral
+- **Escritorio (`> 1280 px`)**: mapa a pantalla completa, barra HUD superior izquierda (buscador, *Lugares*, *Ver circuito*, *Centrar mapa* y filtros de sector), tarjeta de clima a la izquierda del panel flotante (`420 px`, `446 px` en `≥ 1500 px`), zoom en esquina inferior izquierda y pie `.map-footer` desplazado a su derecha (`left: 72px`).
+- **Pantallas intermedias (`≤ 1280 px` / `≤ 1100 px`)**: la tarjeta de clima baja a `bottom: 64px` para no colisionar con el HUD; las etiquetas de botones secundarios pasan a solo icono en `≤ 1100 px`.
+- **Móvil (`≤ 750 px`)**: mapa superior (`58dvh`, mínimo `420 px`) con clima compacto (icono + temperatura) y panel inferior en flujo normal.
 
-Fondos claros de matiz verde sostienen la aplicación, los mensajes y las listas. Blanco separa los controles y el panel de la superficie cartográfica; los bordes suaves dividen regiones y filas.
+## Motion & Accessibility
 
-**The Geographic Identity Rule.** Mantener la correspondencia entre colores de marcadores y su leyenda; acompañar el color con forma o texto.
-
-## Typography
-
-Arial/Helvetica sostiene controles, descripciones y administración. El mapa usa controles de 13–14 px, nombres de lista de 16 px y descripciones de 14 px con interlineado de 1.65. Las estadísticas del recorrido usan cifras tabulares y un valor principal de 32 px.
-
-Los encabezados existentes del panel usan Georgia: título de lugar de 30 px, guía y recorrido de 24 px. Esta dependencia de una tipografía de sistema para display se registra como deuda heredada, no como una nueva prescripción tipográfica. No se sustituyó durante esta extensión.
-
-## Layout
-
-El escritorio ocupa el alto de la ventana con cabecera de 88 px. El mapa toma el ancho restante junto a un panel de 386 px; este mide 430 px desde 1500 px y 340 px hasta 1050 px. El panel tiene desplazamiento propio y relleno habitual de 20 px por 22 px.
-
-Hasta 750 px, mapa y panel pasan a una columna. El área cartográfica mide 59dvh con mínimo de 440 px; el panel sigue en el flujo y se desplaza con la página. Los avisos de mapa ausente preceden al lienzo cuando existen puntos, evitando tapar la ruta.
-
-## Elevation & Depth
-
-Bordes y cambios de superficie organizan paneles y filas. Sombras suaves separan controles superpuestos del mapa: búsqueda (`0 3px 10px #123f3510`), control de encuadre (`0 4px 16px #183c3420`) y teclado (`0 8px 36px #103c3435`). Las filas de lugares conservan fondo plano y borde inferior.
-
-## Shapes
-
-Controles y contenedores usan esquinas suaves. Los sectores tienen silueta de cápsula; los comercios usan marcadores de pin, los grupos círculos y los atractivos un rombo en la leyenda. La selección añade un contorno cálido separado del marcador.
-
-## Components
-
-- **Botones:** acciones principales verdes con texto blanco, ancho completo en el panel y altura táctil mínima de 44 px. Al pasar el puntero se oscurecen; deshabilitados bajan a media opacidad. El foco del mapa usa contorno de 3 px con separación de 3 px.
-- **Filtros y navegación:** sectores con borde suave y selección verde sólida; tipos de lugar en una banda clara con pestaña seleccionada blanca. En móvil, “Todo el circuito” se abrevia visualmente a “Todos” conservando su nombre accesible.
-- **Búsqueda:** campo blanco sin borde interior, contenedor redondeado, icono y botón de borrado. El teclado táctil aparece sobre el contenido y permite cerrarse.
-- **Lugares:** filas separadas por líneas, icono sobre fondo tonal, nombre antes de categoría y sector. Los ejemplos ficticios y las ubicaciones pendientes llevan texto explícito.
-- **Mensajes y sugerencias:** narración sobre verde claro; acciones para añadir paradas sobre crema. El nombre precede a los metadatos. La mascota original se muestra sin recortes en la cabecera de la guía.
-- **Administración:** formularios blancos con borde y esquinas suaves, botones primarios del verde global y campos con etiqueta visible. Reutilizar estos patrones al ampliar sus pantallas.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** conservar la mascota suministrada y la identidad verde existente.
-- **Do** mantener nombres y estados comprensibles junto a los símbolos del mapa.
-- **Do** conservar foco visible y controles táctiles amplios.
-- **Do** usar separadores y cambios de fondo para ordenar el panel.
-
-### Don't:
-
-- **Don't** comunicar categoría, selección o estado únicamente mediante color.
-- **Don't** ocultar los avisos de datos ficticios o ubicación pendiente.
-- **Don't** añadir movimiento que ignore la preferencia de movimiento reducido.
+- **Objetivos táctiles**: mínimo `44×44 px` en todos los botones, pestañas, zoom y controles del teclado táctil.
+- **WAI-ARIA**: `tablist`/`tab`/`tabpanel` vinculados con navegación por flechas, `inert` en panel colapsado y foco visible compatible con `forced-colors`.
+- **Animaciones GPU (60/120 fps)**: inflado elástico en hover de burbujas (`linear()` spring + `cubic-bezier` fallback), pulso radar del tótem, trazado *draw-on* de rutas, clima animado según condición real y panel retráctil deslizante. Todo se detiene limpiamente bajo `prefers-reduced-motion: reduce` preservando realces visuales sin movimiento.

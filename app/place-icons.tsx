@@ -61,7 +61,7 @@ export function placeIconSvg(place: Pick<Place, 'kind' | 'category' | 'visual'>)
   const Icon = placeIconComponent(place);
   let markup = svgCache.get(Icon);
   if (!markup) {
-    markup = renderToStaticMarkup(<Icon size={20} />);
+    markup = renderToStaticMarkup(<Icon size={30} />);
     svgCache.set(Icon, markup);
   }
   return markup;

@@ -13,19 +13,33 @@ export type WeatherData = {
 
 const REFRESH_MS = 10 * 60 * 1000;
 
-function weatherIcon(condition: string) {
+export type WeatherKind = 'storm' | 'drizzle' | 'rain' | 'snow' | 'fog' | 'wind' | 'partly-cloudy' | 'cloudy' | 'clear';
+
+function weatherKind(condition: string): WeatherKind {
   const text = condition.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  if (text.includes('tormenta') || text.includes('electric')) return CloudLightning;
-  if (text.includes('llovizna')) return CloudDrizzle;
-  if (text.includes('lluvia') || text.includes('chubasco') || text.includes('precipit')) return CloudRain;
-  if (text.includes('nieve') || text.includes('aguanieve')) return Snowflake;
-  if (text.includes('niebla') || text.includes('neblina') || text.includes('bruma')) return CloudFog;
-  if (text.includes('viento')) return Wind;
-  if (text.includes('parcial')) return CloudSun;
-  if (text.includes('nublado') || text.includes('cubierto')) return Cloud;
-  if (text.includes('despejado') || text.includes('soleado')) return Sun;
-  return CloudSun;
+  if (text.includes('tormenta') || text.includes('electric')) return 'storm';
+  if (text.includes('llovizna')) return 'drizzle';
+  if (text.includes('lluvia') || text.includes('chubasco') || text.includes('precipit')) return 'rain';
+  if (text.includes('nieve') || text.includes('aguanieve')) return 'snow';
+  if (text.includes('niebla') || text.includes('neblina') || text.includes('bruma')) return 'fog';
+  if (text.includes('viento')) return 'wind';
+  if (text.includes('parcial')) return 'partly-cloudy';
+  if (text.includes('nublado') || text.includes('cubierto')) return 'cloudy';
+  if (text.includes('despejado') || text.includes('soleado')) return 'clear';
+  return 'partly-cloudy';
 }
+
+const WEATHER_ICONS = {
+  storm: CloudLightning,
+  drizzle: CloudDrizzle,
+  rain: CloudRain,
+  snow: Snowflake,
+  fog: CloudFog,
+  wind: Wind,
+  'partly-cloudy': CloudSun,
+  cloudy: Cloud,
+  clear: Sun,
+};
 
 function formatTemperature(raw: string) {
   const numeric = Number.parseFloat(raw.replace(',', '.'));
@@ -71,12 +85,19 @@ export default function WeatherCard() {
   const city = weather.city?.trim() || '';
   const humidity = weather.humidity?.trim() ? `${weather.humidity.trim()}% hum.` : '';
   const meta = [city, humidity].filter(Boolean).join(' · ');
-  const Icon = weatherIcon(condition);
+  const kind = weatherKind(condition);
+  const Icon = WEATHER_ICONS[kind];
+  const hasDrops = kind === 'rain' || kind === 'drizzle' || kind === 'storm';
+  const hasFlakes = kind === 'snow';
+  const hasGlow = kind === 'clear' || kind === 'partly-cloudy';
 
   return (
-    <aside className="map-weather" aria-label="Clima actual">
+    <aside className="map-weather" data-weather={kind} aria-label="Clima actual">
       <span className="map-weather-icon" aria-hidden="true">
+        {hasGlow && <span className="weather-glow" />}
         <Icon size={20} />
+        {hasDrops && <span className="weather-drops"><i /><i /><i /></span>}
+        {hasFlakes && <span className="weather-flakes"><i /><i /><i /></span>}
       </span>
       <div className="map-weather-body">
         <div className="map-weather-main">

@@ -5,6 +5,7 @@ import type { Catalog, Place, Route } from './map-types';
 import { placeIconSvg } from './place-icons';
 
 const escapeAttr = (value: string) => value.replace(/[&"'<>]/g, ch => ({ '&': '&amp;', '"': '&quot;', "'": '&#39;', '<': '&lt;', '>': '&gt;' }[ch] ?? ch));
+const reducedMotion = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 type Props = { catalog: Catalog; places: Place[]; selected: string | null; route: Route | null; suggested: string[]; resetKey: number; view: 'nearby' | 'circuit'; onSelect: (place: Place) => void };
 export default function TerritoryMap({catalog, places, selected, route, suggested, resetKey, view, onSelect}: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -22,7 +23,7 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
     map.current = current; layer.current = L.layerGroup().addTo(current);
     L.control.zoom({position:'bottomleft'}).addTo(current);
     current.fitBounds([[catalog.bounds[1],catalog.bounds[0]],[catalog.bounds[3],catalog.bounds[2]]],{padding:[28,28]});
-    const change = () => setRevision(n=>n+1); current.on('zoomend moveend',change);
+    const change = () => setRevision(n=>n+1); current.on('zoomend',change);
     fetch('/api/quibar/map',{signal:controller.signal,cache:'no-store'}).then(async response => {
       if (!response.ok) throw Error(); const info = await response.json();
       if (!info.available) { setMessage('El mapa local aún no está instalado. Puedes consultar los lugares de la lista.'); return; }
@@ -39,7 +40,7 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
     const bounds = view === 'nearby' && station.configured && station.latitude != null && station.longitude != null
       ? L.latLng(station.latitude, station.longitude).toBounds(1000)
       : L.latLngBounds([[catalog.bounds[1], catalog.bounds[0]], [catalog.bounds[3], catalog.bounds[2]]]);
-    current.fitBounds(bounds, { padding: [28, 28] });
+    current.fitBounds(bounds, { padding: [28, 28], animate: !reducedMotion(), duration: 0.65 });
   }, [resetKey, view, catalog.station.configured, catalog.station.latitude, catalog.station.longitude]);
   useEffect(() => {
     const current=map.current, markers=layer.current;if(!current||!markers)return;
@@ -48,7 +49,7 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
     const groups: {point:L.Point; items:Place[]}[]=[];
     for(const place of places.filter(p=>p.located&&p.latitude!=null&&p.longitude!=null)){
       const point=current.project([place.latitude!,place.longitude!]);
-      const group=!pinned.has(place.key)?groups.find(g=>!g.items.some(p=>pinned.has(p.key))&&g.point.distanceTo(point)<42):undefined;
+      const group=!pinned.has(place.key)?groups.find(g=>!g.items.some(p=>pinned.has(p.key))&&g.point.distanceTo(point)<54):undefined;
       if(group)group.items.push(place);else groups.push({point,items:[place]});
     }
     for(const group of groups){
@@ -56,16 +57,17 @@ export default function TerritoryMap({catalog, places, selected, route, suggeste
       const stop=route?.stops.findIndex(p=>p.key===first.key)??-1;
       const destination=route?.destination.key===first.key;
       const hasLogo=count===1&&!destination&&stop<0&&Boolean(first.logo_url);
+      const isCircle=count>1||destination||stop>=0;
       const content=count>1?String(count):destination?'D':stop>=0?String(stop+1):hasLogo?`<img class="place-marker-logo" src="${escapeAttr(first.logo_url!)}" alt="" />`:placeIconSvg(first);
-      const icon=L.divIcon({className:'place-marker-wrap',html:`<span class="place-marker ${count>1?'cluster':first.kind} ${first.key===selected?'selected':''} ${suggested.includes(first.key)?'suggested':''} ${destination||stop>=0?'on-route':''} ${hasLogo?'has-logo':''}">${content}</span>`,iconSize:[44,48],iconAnchor:[22,43]});
+      const icon=L.divIcon({className:'place-marker-wrap',html:`<span class="place-marker ${count>1?'cluster':first.kind} ${first.key===selected?'selected':''} ${suggested.includes(first.key)?'suggested':''} ${destination||stop>=0?'on-route':''} ${hasLogo?'has-logo':''}">${content}</span>`,iconSize:[56,64],iconAnchor:isCircle?[28,32]:[28,56]});
       const markerText=count>1?`${count} lugares${group.items.some(p=>p.demo)?' · incluye ubicaciones de demostración':''}`:`${first.name}${first.demo?first.kind==='business'?' · Ubicación de demostración · negocio ficticio':' · Ubicación de demostración · lugar ficticio':''}`;
-      const marker=L.marker([first.latitude!,first.longitude!],{icon,title:markerText+(count>1?'. Toca para acercar':''),keyboard:true}).addTo(markers);
-      const tooltip=document.createElement('span');tooltip.textContent=markerText;marker.bindTooltip(tooltip,{direction:'top',offset:[0,-30]});
+      const marker=L.marker([first.latitude!,first.longitude!],{icon,title:markerText+(count>1?'. Toca para acercar':''),keyboard:true,riseOnHover:true,riseOffset:500}).addTo(markers);
+      const tooltip=document.createElement('span');tooltip.textContent=markerText;marker.bindTooltip(tooltip,{direction:'top',offset:isCircle?[0,-34]:[0,-48]});
       marker.on('click',()=>{if(count>1){current.fitBounds(L.latLngBounds(group.items.map(p=>[p.latitude!,p.longitude!])),{padding:[60,60],maxZoom:Math.min(current.getZoom()+3,current.getMaxZoom())});}else select.current(first);});
     }
     if(catalog.station.configured){const icon=L.divIcon({className:'station-marker',html:'<span></span>',iconSize:[24,24]});L.marker([catalog.station.latitude!,catalog.station.longitude!],{icon,title:'Usted está aquí: '+catalog.station.name}).addTo(markers).bindTooltip('Usted está aquí',{permanent:true,direction:'top',offset:[0,-14]});}
   },[places,selected,suggested,route,catalog.station,revision]);
-  useEffect(()=>{const current=map.current;if(!current)return;routeLayer.current?.remove();routeLayer.current=null;if(route){routeLayer.current=L.geoJSON(route.geometry,{style:{color:'#126d65',weight:6,opacity:.9}}).addTo(current);current.fitBounds(routeLayer.current.getBounds(),{padding:[55,55],maxZoom:16});}},[route]);
-  useEffect(()=>{const current=map.current;if(!current)return;const p=places.find(p=>p.key===selected);if(p?.located)current.panTo([p.latitude!,p.longitude!]);},[selected]);
+  useEffect(()=>{const current=map.current;if(!current)return;routeLayer.current?.remove();routeLayer.current=null;if(route){routeLayer.current=L.geoJSON(route.geometry,{style:{color:'#0076A8',weight:6,opacity:.92,className:'route-path-animated'}}).addTo(current);routeLayer.current.eachLayer?.(sub=>{const el=(sub as L.Path).getElement?.();if(el instanceof SVGPathElement&&typeof el.getTotalLength==='function')el.style.setProperty('--route-length',String(Math.ceil(el.getTotalLength())));});current.fitBounds(routeLayer.current.getBounds(),{padding:[55,55],maxZoom:16,animate:!reducedMotion(),duration:.65});}},[route]);
+  useEffect(()=>{const current=map.current;if(!current)return;const p=places.find(p=>p.key===selected);if(p?.located)current.panTo([p.latitude!,p.longitude!],{animate:!reducedMotion(),duration:.65});},[selected]);
   return <div className="territory-map-shell"><svg width="0" height="0" aria-hidden="true" style={{position:'absolute',pointerEvents:'none'}}><defs><filter id="quibar-green-base" colorInterpolationFilters="sRGB"><feColorMatrix type="matrix" values="1 -0.75 0.75 0 0 0 1.22 -0.22 0 0 0 0.15 0.85 0 0 0 0 0 1 0"/><feComponentTransfer><feFuncR type="table" tableValues="0 0.1 0.2 0.3 0.4 0.5 0.58 0.67 0.82 0.96 1"/></feComponentTransfer></filter></defs></svg><div className="territory-map" ref={container} role="region" aria-label="Mapa de comercios y atractivos de Santa Bárbara, Huequecura y Ralco"/>{message&&<div className={`map-message ${available||places.some(p=>p.located)?'notice':''}`} role="status"><strong>{available?'Cobertura del mapa':'Mapa local pendiente'}</strong><p>{message}</p></div>}<div className="map-key" aria-label="Leyenda"><span><i className="key-business"/>Comercios</span><span><i className="key-interest"/>Atractivos</span>{catalog.station.configured&&<span><i className="key-station"/>Usted está aquí</span>}</div></div>;
 }

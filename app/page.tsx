@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, ChevronRight, Compass, Footprints, Car, List, MapPin, Navigation, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Search, Send, Sparkles, Square, Volume2, X, Delete } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, ChevronRight, Compass, Footprints, Car, List, LocateFixed, MapPin, Navigation, PanelRightClose, PanelRightOpen, Plus, RotateCcw, Search, Send, Sparkles, Square, Volume2, X, Delete } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Catalog, Place, Route, RouteRequest, Suggestion } from './map-types';
 import { minutes, routeUrl, sectors } from './map-types';
@@ -84,6 +84,9 @@ export default function Home(){
               <button className="map-overview" onClick={()=>{setMapView('circuit');setResetKey(n=>n+1);}}>
                 <Compass size={18}/><span>Ver circuito</span>
               </button>
+              <button className="map-center" aria-label="Centrar mapa" onClick={()=>{setMapView('nearby');setResetKey(n=>n+1);}}>
+                <LocateFixed size={18}/><span>Centrar mapa</span>
+              </button>
               {!panelOpen&&<button className="panel-reopen" aria-label="Abrir panel de exploración" onClick={()=>setPanelOpen(true)}>
                 <PanelRightOpen size={18}/><span>Explorar</span>
               </button>}
@@ -102,7 +105,7 @@ export default function Home(){
         </div>
       </section>
 
-      <aside className={`explore-panel ${panelOpen?'is-open':'is-collapsed'}`} aria-label="Lugares y recomendaciones de Quíbar" hidden={!panelOpen}>
+      <aside className={`explore-panel ${panelOpen?'is-open':'is-collapsed'}`} aria-label="Lugares y recomendaciones de Quíbar" aria-hidden={!panelOpen} inert={!panelOpen||undefined}>
         <div className="guide-intro">
           <img className="guide-watermark" src="/brand/colbun-isotipo.svg" alt="" aria-hidden="true"/>
           <img className="guide-mascot" src="/quibar-angostura-original.png" alt="Quíbar, mascota de Angostura del Biobío"/>
@@ -113,21 +116,21 @@ export default function Home(){
           <button className="panel-close-btn" aria-label="Ocultar panel" onClick={()=>setPanelOpen(false)}><PanelRightClose size={20}/></button>
         </div>
 
-        <div className="panel-tabs" role="tablist" aria-label="Secciones del panel">
-          <button role="tab" aria-selected={panelTab==='places'} onClick={()=>setPanelTab('places')}><ColbunMapIcon size={17}/><span>Lugares</span></button>
-          <button role="tab" aria-selected={panelTab==='route'} onClick={()=>setPanelTab('route')}><Navigation size={16}/><span>Ruta{route?' activa':''}</span></button>
-          <button role="tab" aria-selected={panelTab==='chat'} onClick={()=>setPanelTab('chat')}><ColbunCoffeeIcon size={17}/><span>Asistente</span></button>
+        <div className="panel-tabs" role="tablist" aria-label="Secciones del panel" onKeyDown={e=>{const order:PanelTab[]=['places','route','chat'];const idx=order.indexOf(panelTab);const next=e.key==='ArrowRight'?order[(idx+1)%order.length]:e.key==='ArrowLeft'?order[(idx+order.length-1)%order.length]:e.key==='Home'?order[0]:e.key==='End'?order[order.length-1]:null;if(next){e.preventDefault();setPanelTab(next);document.getElementById('tab-'+next)?.focus();}}}>
+          <button id="tab-places" role="tab" aria-selected={panelTab==='places'} aria-controls="panel-tab-places" tabIndex={panelTab==='places'?0:-1} onClick={()=>setPanelTab('places')}><ColbunMapIcon size={17}/><span>Lugares</span></button>
+          <button id="tab-route" role="tab" aria-selected={panelTab==='route'} aria-controls="panel-tab-route" tabIndex={panelTab==='route'?0:-1} onClick={()=>setPanelTab('route')}><Navigation size={16}/><span>Ruta{route?' activa':''}</span></button>
+          <button id="tab-chat" role="tab" aria-selected={panelTab==='chat'} aria-controls="panel-tab-chat" tabIndex={panelTab==='chat'?0:-1} onClick={()=>setPanelTab('chat')}><ColbunCoffeeIcon size={17}/><span>Asistente</span></button>
         </div>
 
-        <div className="panel-scroll">
+        <div className="panel-scroll" role="tabpanel" id={`panel-tab-${panelTab}`} aria-labelledby={`tab-${panelTab}`}>
           {error&&<p role="alert" className="travel-error">{error}</p>}
           {routeError&&<p role="alert" className="travel-error">{routeError}</p>}
 
           {panelTab==='places'&&(selected?<section className="place-detail">
             <button className="text-button" onClick={()=>{setSelectedKey(null);clearRoute();}}><ArrowLeft size={18}/> Todos los lugares</button>
-            {selected.photos?.[0]&&<img className="place-photo" src={selected.photos[0].url} alt={selected.photos[0].alt}/>}
+            {selected.photos?.[0]&&<img className="place-photo" src={selected.photos[0].url} alt={selected.photos[0].alt} loading="lazy" decoding="async"/>}
             <div className="place-detail-header">
-              {selected.logo_url&&<img className="place-detail-logo" src={selected.logo_url} alt={`Logotipo de ${selected.name}`}/>}
+              {selected.logo_url&&<img className="place-detail-logo" src={selected.logo_url} alt={`Logotipo de ${selected.name}`} loading="lazy" decoding="async"/>}
               <div>
                 <h2>{selected.name}</h2>
                 <span className="place-category">{selected.category}, {selected.sector||selected.commune}</span>
@@ -149,7 +152,7 @@ export default function Home(){
             {!ready?<p role="status">Cargando lugares del circuito…</p>:list&&<section className="places-list" aria-label="Lista de lugares">
               <div className="places-count">{visible.length} {visible.length===1?'lugar':'lugares'} para descubrir</div>
               {visible.map(p=>{const Icon=placeIconComponent(p);return <button className="place-list-row" key={p.key} onClick={()=>selectPlace(p)} aria-label={'Ver ficha de '+p.name}>
-                <span className={`place-list-icon ${p.kind} ${p.logo_url?'has-logo':''}`}>{p.logo_url?<img className="place-list-logo" src={p.logo_url} alt=""/>:<Icon size={22}/>}</span>
+                <span className={`place-list-icon ${p.kind} ${p.logo_url?'has-logo':''}`}>{p.logo_url?<img className="place-list-logo" src={p.logo_url} alt="" loading="lazy" decoding="async"/>:<Icon size={22}/>}</span>
                 <span className="place-list-meta">
                   <strong>{p.name}</strong>
                   <small>{p.sector||p.commune}, {p.category}</small>

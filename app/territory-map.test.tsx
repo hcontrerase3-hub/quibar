@@ -75,7 +75,7 @@ test("los refrescos y la selección respetan la vista y los controles distinguen
   expect(mocks.map.fitBounds).not.toHaveBeenCalled();
   const place = { key: "business:test", id: "test", kind: "business" as const, name: "Prueba", category: "Comercio", commune: "Santa Bárbara", sector: "Santa Bárbara", summary: "Prueba", description: "Prueba", latitude: -37.7, longitude: -71.8, located: true, demo: true, hours: "", area: "", photos: [] };
   rerender(<TerritoryMap {...props} catalog={refreshed} places={[place]} selected={place.key} />);
-  expect(mocks.map.panTo).toHaveBeenCalledWith([place.latitude, place.longitude]);
+  expect(mocks.map.panTo).toHaveBeenCalledWith([place.latitude, place.longitude], expect.objectContaining({ animate: true, duration: 0.65 }));
   expect(mocks.map.fitBounds).not.toHaveBeenCalled();
   rerender(<TerritoryMap {...props} view="circuit" resetKey={1} />);
   expect((mocks.map.fitBounds.mock.lastCall![0] as L.LatLngBounds).getSouth()).toBe(-38.05);
@@ -88,7 +88,7 @@ test("una ruta encuadra su trazado y lo mantiene al redimensionar", async () => 
   await waitFor(() => expect(mocks.map.setMaxZoom).toHaveBeenCalled());
   const route = { geometry: { type: "LineString", coordinates: [] }, stops: [], destination: { key: "business:test" } } as unknown as Route;
   rerender(<TerritoryMap {...props} route={route} />);
-  expect(mocks.map.fitBounds).toHaveBeenLastCalledWith(mocks.routeBounds, { padding: [55, 55], maxZoom: 16 });
+  expect(mocks.map.fitBounds).toHaveBeenLastCalledWith(mocks.routeBounds, expect.objectContaining({ padding: [55, 55], maxZoom: 16, animate: true }));
   mocks.map.fitBounds.mockClear();
   mocks.resize();
   expect(mocks.map.fitBounds).toHaveBeenLastCalledWith(mocks.routeBounds, { padding: [55, 55], maxZoom: 16 });
@@ -103,12 +103,20 @@ test("cada categoría muestra un icono distinto y los comercios con logotipo lo 
   const markerSpy = vi.mocked(L.marker);
   render(<TerritoryMap {...props} places={[gastro, mirador, withLogo]} />);
   await waitFor(() => expect(mocks.map.setMaxZoom).toHaveBeenCalled());
-  const htmls = markerSpy.mock.calls.map(call => (call[1]?.icon as L.DivIcon | undefined)?.options?.html);
-  const placeHtmls = htmls.filter((h): h is string => typeof h === "string" && h.includes("place-marker"));
+  const placeCalls = markerSpy.mock.calls.filter(call => {
+    const html = (call[1]?.icon as L.DivIcon | undefined)?.options?.html;
+    return typeof html === "string" && html.includes("place-marker");
+  });
+  const placeHtmls = placeCalls.map(call => (call[1]?.icon as L.DivIcon).options.html as string);
   expect(placeHtmls).toHaveLength(3);
   expect(placeHtmls[0]).toContain("<svg");
+  expect(placeHtmls[0]).toContain('width="30"');
+  expect(placeHtmls[0]).toContain('height="30"');
   expect(placeHtmls[1]).toContain("<svg");
   expect(placeHtmls[0]).not.toBe(placeHtmls[1]);
   expect(placeHtmls[2]).toContain("has-logo");
   expect(placeHtmls[2]).toContain('<img class="place-marker-logo" src="/media/logos/demo.webp"');
+  expect((placeCalls[0][1]?.icon as L.DivIcon).options.iconSize).toEqual([56, 64]);
+  expect((placeCalls[0][1]?.icon as L.DivIcon).options.iconAnchor).toEqual([28, 56]);
+  expect(placeCalls[0][1]?.riseOnHover).toBe(true);
 });
