@@ -8,6 +8,7 @@ import { ColbunCoffeeIcon, ColbunMapIcon } from './colbun-icons';
 import { normalize } from './data';
 import { track } from '../lib/metrics';
 import WeatherCard from './weather-card';
+import QuibarAssistant from './quibar-assistant';
 import './map-experience.css';
 
 const TerritoryMap = lazy(()=>import('./territory-map'));
@@ -97,6 +98,24 @@ export default function Home(){
           </div>
 
           <WeatherCard/>
+
+          <QuibarAssistant
+  key={resetKey}
+  thinking={chatBusy || busy || suggesting}
+  speaking={speaking}
+  routeReady={!!route}
+  selected={!!selected}
+  chatOpen={panelOpen && panelTab === 'chat'}
+  hidden={!!keyboard || qr}
+  onOpen={() => {
+    setPanelOpen(true);
+    setPanelTab('chat');
+    setKeyboard(null);
+    requestAnimationFrame(() =>
+      document.getElementById('tab-chat')?.focus()
+    );
+  }}
+/>
 
           <div className="map-footer">
             <span><MapPin size={14}/> Circuito Angostura</span>

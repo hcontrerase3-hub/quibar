@@ -1,0 +1,13 @@
+.quibar-float{position:absolute;z-index:425;bottom:108px;left:20px;display:flex;flex-direction:column;align-items:flex-start;gap:8px;max-width:220px;pointer-events:none}
+.quibar-bubble,.quibar-character{pointer-events:auto}
+.quibar-bubble{position:relative;background:#fff;color:#173b32;border:1px solid #c7d9d0;border-radius:16px 16px 16px 4px;padding:12px 32px 12px 14px;box-shadow:0 4px 16px #0002;font-size:13px;line-height:1.4}
+.quibar-bubble p{margin:0}.quibar-dismiss{position:absolute;right:4px;top:2px;width:28px;height:28px;background:none;border:0;color:#34564a;font-size:22px;cursor:pointer}
+.quibar-character{display:flex;flex-direction:column;align-items:center;border:0;background:none;cursor:pointer;padding:0;color:#fff;touch-action:manipulation}
+.quibar-character img{width:150px;height:175px;object-fit:contain;filter:drop-shadow(0 4px 5px #0003);transform-origin:bottom center}
+.quibar-character span{background:#176345;border-radius:999px;padding:8px 14px;font-size:12px;font-weight:700;min-height:36px;display:grid;place-items:center}
+.quibar-character:focus-visible,.quibar-dismiss:focus-visible{outline:3px solid #e5a824;outline-offset:3px}
+.quibar-character .quibar-still{display:none}
+.quibar-float[data-state=thinking] img{animation:quibar-think 1.8s ease-in-out infinite}.quibar-float[data-state=speaking] img{animation:quibar-talk .7s ease-in-out infinite}
+@keyframes quibar-think{50%{transform:rotate(-5deg) translateY(-3px)}}@keyframes quibar-talk{50%{transform:translateY(-4px) scale(1.02)}}
+@media(max-width:750px){.quibar-float{bottom:90px;left:12px;max-width:170px}.quibar-character img{width:95px;height:115px}.quibar-bubble{font-size:11px}}
+@media(prefers-reduced-motion:reduce){.quibar-character .quibar-motion{display:none}.quibar-character .quibar-still{display:block;animation:none!important}}
